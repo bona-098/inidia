@@ -1,0 +1,161 @@
+form.option('items', [
+                    {
+                        itemType: 'group',
+                        colCount: 1,
+                        caption: 'Interests',
+                        items: [
+                            {
+                                label: { text: 'Code' },
+                                editorType: 'dxTextBox',
+                                dataField: 'code',
+                                disabled: true,
+                                editorOptions: {
+                                    value: appointmentData.code || ''
+                                }
+                            },
+                            {
+                                label: { text: 'Subject' },
+                                editorType: 'dxTextBox',
+                                dataField: 'text',
+                                editorOptions: {
+                                    value: appointmentData.text || ''
+                                }
+                            },
+                            {
+                                label: { text: 'Description' },
+                                editorType: 'dxTextArea',
+                                dataField: 'description',
+                                editorOptions: {
+                                    value: appointmentData.description || ''
+                                }
+                            },                            
+                        ]
+                    },                
+                    {
+                        itemType: 'group',
+                        caption: 'Room & Date',
+                        items: [
+                            {
+                                label: { text: 'Room' },
+                                editorType: 'dxSelectBox',
+                                dataField: 'ghm_room_id',
+                                editorOptions: {
+                                    dataSource: roomsWithLocations,
+                                    displayExpr: 'text',
+                                    valueExpr: 'id',
+                                    value: appointmentData.ghm_room_id || null
+                                }
+                            },
+                            {
+                                label: { text: 'Start Date' },
+                                editorType: 'dxDateBox',
+                                dataField: 'startDate',
+                                editorOptions: {
+                                    type: 'datetime',
+                                    value: appointmentData.startDate || new Date(),
+                                    displayFormat: 'yyyy-MM-dd HH:mm:ss',
+                                    dateSerializationFormat: 'yyyy-MM-ddTHH:mm:ssZ'
+                                }
+                            },
+                            {
+                                label: { text: 'End Date' },
+                                editorType: 'dxDateBox',
+                                dataField: 'endDate',
+                                editorOptions: {
+                                    type: 'datetime',
+                                    value: appointmentData.endDate || new Date(),
+                                    displayFormat: 'yyyy-MM-dd HH:mm:ss',
+                                    dateSerializationFormat: 'yyyy-MM-ddTHH:mm:ssZ'
+                                }
+                            },
+                        ]
+                    },
+                    {
+                        itemType: 'group',
+                        colSpan: 1,
+                        captionTemplate: groupCaptionTemplate('tel'),
+                        caption: 'Guest Type',
+                        items: [
+                            {
+                                itemType: 'tabbed',
+                                tabPanelOptions: {
+                                    deferRendering: false,
+                                },
+                                tabs: [
+                                    {
+                                        title: 'Employee',
+                                        items: [{
+                                            label: { text: 'Employee' },
+                                            editorType: 'dxTagBox',
+                                            dataField: 'employee_id',
+                                            editorOptions: {                                                
+                                                dataSource: emplo,
+                                                displayExpr: 'FullName',
+                                                valueExpr: 'id',
+                                                value: appointmentData.employee_id || [],
+                                                showSelectionControls: true,
+                                                applyValueMode: 'useButtons',
+                                                searchEnabled: true
+                                            }
+                                            }]
+                                        
+                                    },
+                                    {
+                                        // label: { text: 'Guest' },
+                                        title: 'Guest',
+                                        items: [{
+                                        editorType: 'dxTagBox',
+                                        dataField: 'guest',
+                                        editorOptions: {
+                                            items: appointmentData.guest || [],
+                                            acceptCustomValue: true,
+                                            searchEnabled: true,
+                                            showSelectionControls: true,
+                                            applyValueMode: 'useButtons',
+                                            onCustomItemCreating: function(args) {
+                                                let newValue = args.text;
+                                                let guests = form.option('formData').guest || [];
+                                                if (!guests.includes(newValue)) {
+                                                    guests.push(newValue);
+                                                    args.customItem = newValue;
+                                                } else {
+                                                    args.customItem = null;
+                                                }
+                                                // appointmentData.guest = guests;
+                                                form.updateData('guest', guests);
+                                            }
+                                        }
+                                    }]
+                                    },                            
+                                    {
+                                        // label: { text: 'Family' },
+                                        title: 'Family',
+                                        items: [{
+                                        editorType: 'dxTagBox',
+                                        dataField: 'family',
+                                        editorOptions: {
+                                            items: appointmentData.family || [],
+                                            acceptCustomValue: true,
+                                            searchEnabled: true,
+                                            showSelectionControls: true,
+                                            applyValueMode: 'useButtons',
+                                            onCustomItemCreating: function(args) {
+                                                let newValue = args.text;
+                                                let familys = form.option('formData').family || [];
+                                                if (!familys.includes(newValue)) {
+                                                    familys.push(newValue);
+                                                    args.customItem = newValue;
+                                                } else {
+                                                    args.customItem = null;
+                                                }
+                                                // appointmentData.guest = guests;
+                                                form.updateData('family', familys);
+                                            }
+                                        }
+                                    }]
+                                    } 
+                                ]
+                            }
+                        ]
+                    }
+                ]);
