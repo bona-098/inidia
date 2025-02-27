@@ -20,7 +20,7 @@ $(function() {
         dataSubmitted = true;
         const formData = $('#booking-form').serializeArray();
         const employeeIdsField = formData.find(field => field.name === 'employee_id');
-        employeeIdsField.value = serializeToJSON(employeeIdsField.value.split(',').map(Number));
+        // employeeIdsField.value = serializeToJSON(employeeIdsField.value.split(',').map(Number));
 
         const guestField = formData.find(field => field.name === 'guest');
         guestField.value = (guestField.value.split(',').map(name => name.trim()));
@@ -129,11 +129,11 @@ function updateScheduler(location, roomId) {
             const deleteButtonId = `delete-btn-${booking.id}`;
             const tooltipHtml = `
                 <div>
-                    <b>${booking.text || "No Title"}</b><br>
+                    <b>Subject : ${booking.text || "No Title"}</b><br>
                     ${formatDate(booking.startDate)} - ${formatDate(booking.endDate)}<br>
                     Accupancy: ${roomAccupancy} Person"<br>
-                    Person: ${booking.totalPeople || "No Name"}<br>
-                    remaining: ${remainingCapacity} persib<br>                    
+                    Person: ${booking.totalPeople || "No Name"} Person<br>
+                    remaining: ${remainingCapacity} Person<br>                    
                     Created By: ${booking.creator || "No Name"}<br><br>
                     <button id="${deleteButtonId}" class="btn btn-danger btn-sm">Delete</button>
                 </div>
@@ -230,16 +230,16 @@ function updateScheduler(location, roomId) {
                 appointmentData.employee_id = deserializeFromJSON(appointmentData.employee_id);
             }
             if (appointmentData.guest && typeof appointmentData.guest === 'string') {
-                console.log(appointmentData.guest)
+                // console.log(appointmentData.guest)
                 appointmentData.guest = deserializeFromJSON(appointmentData.guest);
-                console.log(appointmentData.guest)
+                // console.log(appointmentData.guest)
             } else if (!appointmentData.guest) {
                 appointmentData.guest = []; // Inisialisasi dengan string kosong jika nilai `guest` adalah `null` atau `undefined`
             }
             if (appointmentData.family && typeof appointmentData.family === 'string') {
-                console.log(appointmentData.family)
+                // console.log(appointmentData.family)
                 appointmentData.family = deserializeFromJSON(appointmentData.family);
-                console.log(appointmentData.family)
+                // console.log(appointmentData.family)
             } else if (!appointmentData.family) {
                 appointmentData.family = []; // Inisialisasi dengan string kosong jika nilai `family` adalah `null` atau `undefined`
             }
@@ -333,7 +333,11 @@ function updateScheduler(location, roomId) {
                             dataField: 'employee_id',
                             editorOptions: {                                                
                                 dataSource: emplo,
-                                displayExpr: 'FullName',
+                                displayExpr: function(item) {
+                                    if (!item) return "";
+                                    const department = departments.find(dept => dept.id === item.department_id);
+                                    return `${item.FullName} | ${item.SAPID} | ${department ? department.DepartmentName : "Failed"}`;
+                                },
                                 valueExpr: 'id',
                                 value: Array.isArray (appointmentData.employee_id) ? appointmentData.employee_id : [],
                                 showSelectionControls: true,
@@ -392,12 +396,12 @@ function updateScheduler(location, roomId) {
                             }
                         } 
                     ]
-                }
+                }                         
             ]);
         },
         onAppointmentAdding: function(e) {
             const appointmentData = e.appointmentData;
-            appointmentData.employee_id = serializeToJSON(appointmentData.employee_id);
+            // appointmentData.employee_id = serializeToJSON(appointmentData.employee_id);
             appointmentData.guest = serializeToJSON(appointmentData.guest);
             appointmentData.family = serializeToJSON(appointmentData.family);
             sendRequest(apiurl + "/" + modname, "POST", {
@@ -424,7 +428,8 @@ function updateScheduler(location, roomId) {
         onAppointmentUpdating: function(e) {
             const appointmentData = e.newData;
             appointmentData.id = e.oldData.id; // Ensure id is included in appointmentData for updating
-            appointmentData.employee_id = serializeToJSON(appointmentData.employee_id);
+            // appointmentData.employee_id = serializeToJSON(appointmentData.employee_id);
+            appointmentData.employee_id = Array.isArray(appointmentData.employee_id) ? JSON.stringify(appointmentData.employee_id):appointmentData.employee_id;
             appointmentData.guest = Array.isArray(appointmentData.guest) ? JSON.stringify(appointmentData.guest):appointmentData.guest;
             appointmentData.family = Array.isArray(appointmentData.family) ? JSON.stringify(appointmentData.family):appointmentData.family;
             console.log('Updating appointment with data:', appointmentData); // Debug log
