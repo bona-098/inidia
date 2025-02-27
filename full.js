@@ -1,3 +1,16 @@
+dx.all.js:9 
+ Uncaught TypeError: e.forEach is not a function
+    at Object.getExpr (dx.all.js:9:158819)
+    at Object.getCombinedFilter (dx.all.js:9:159143)
+    at t._getFilter (dx.all.js:9:4136276)
+    at t._getFilteredItems (dx.all.js:9:4136963)
+    at t._loadTagsData (dx.all.js:9:4138874)
+    at t._renderTags (dx.all.js:9:4139326)
+    at t._renderMultiSelect (dx.all.js:9:4134837)
+    at t._renderInputValueImpl (dx.all.js:9:4133089)
+    at t._renderInputValueImpl (dx.all.js:9:47380)
+    at t._renderInputValueAsync (dx.all.js:9:4008691)
+=========
 var modname = 'ghmrequest';
 var modelclass = 'ghm';
 var popupmode;
