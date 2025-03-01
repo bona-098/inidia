@@ -1,16 +1,3 @@
-dx.all.js:9 
- Uncaught TypeError: e.forEach is not a function
-    at Object.getExpr (dx.all.js:9:158819)
-    at Object.getCombinedFilter (dx.all.js:9:159143)
-    at t._getFilter (dx.all.js:9:4136276)
-    at t._getFilteredItems (dx.all.js:9:4136963)
-    at t._loadTagsData (dx.all.js:9:4138874)
-    at t._renderTags (dx.all.js:9:4139326)
-    at t._renderMultiSelect (dx.all.js:9:4134837)
-    at t._renderInputValueImpl (dx.all.js:9:4133089)
-    at t._renderInputValueImpl (dx.all.js:9:47380)
-    at t._renderInputValueAsync (dx.all.js:9:4008691)
-=========
 var modname = 'ghmrequest';
 var modelclass = 'ghm';
 var popupmode;
@@ -91,6 +78,110 @@ function updateRoomSelector(location) {
 
     updateScheduler(location, null);
 }
+// Fungsi untuk mengecek apakah dua rentang tanggal beririsan
+function isDateOverlap(start1, end1, start2, end2) {
+    return (new Date(start1) <= new Date(end2)) && (new Date(start2) <= new Date(end1));
+}
+// Fungsi untuk memastikan array selalu valid (menghindari null/undefined)
+function safeArray(arr) {
+    return Array.isArray(arr) ? arr : [];
+}
+// Fungsi untuk menghitung total tamu pada tanggal yang beririsan dengan booking baru
+function getTotalGuestsForDateLocally(scheduler, roomId, startDate, endDate) {
+    let appointments = scheduler.getDataSource().items(); // Ambil semua booking yang sudah ada
+    let totalGuests = 0;
+
+    appointments.forEach(appointment => {
+        if (
+            appointment.ghm_room_id === roomId &&
+            isDateOverlap(appointment.startDate, appointment.endDate, startDate, endDate)
+        ) {
+            let guestCount = safeArray(appointment.guest).length;
+            let familyCount = safeArray(appointment.family).length;
+            let employeeCount = safeArray(appointment.employee_id).length;
+            totalGuests += guestCount + familyCount + employeeCount;
+        }
+    });
+
+    return totalGuests;
+}
+// Fungsi untuk menghitung jumlah tamu per hari dalam rentang booking
+function getTotalGuestsPerDay(scheduler, roomId, startDate, endDate) {
+    let appointments = scheduler.getDataSource().items(); // Ambil semua booking yang sudah ada
+    let dailyGuestCount = {}; // Objek untuk menyimpan jumlah tamu per tanggal
+
+    appointments.forEach(appointment => {
+        if (appointment.ghm_room_id === roomId) {
+            let bookingStart = new Date(appointment.startDate);
+            let bookingEnd = new Date(appointment.endDate);
+
+            for (let d = new Date(bookingStart); d <= bookingEnd; d.setDate(d.getDate() + 1)) {
+                let dateKey = d.toISOString().split("T")[0]; // Format YYYY-MM-DD
+                let guestCount = safeArray(appointment.guest).length;
+                let familyCount = safeArray(appointment.family).length;
+                let employeeCount = safeArray(appointment.employee_id).length;
+                let totalGuests = guestCount + familyCount + employeeCount;
+
+                dailyGuestCount[dateKey] = (dailyGuestCount[dateKey] || 0) + totalGuests;
+            }
+        }
+    });
+
+    return dailyGuestCount;
+}
+// Fungsi validasi booking saat membuka form
+function validateBooking(form) {
+    let guestCount = safeArray(form.getEditor("guest")?.option("value")).length;
+    let familyCount = safeArray(form.getEditor("family")?.option("value")).length;
+    let employeeCount = safeArray(form.getEditor("employee_id")?.option("value")).length;
+    let totalGuests = guestCount + familyCount + employeeCount;
+
+    let selectedRoom = form.getEditor("ghm_room_id")?.option("value");
+    let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomAccupancy || 0;
+
+    let doneButton = $(".dx-popup-bottom .dx-button.dx-popup-done");
+
+    if (totalGuests > roomCapacity) {
+        DevExpress.ui.notify("Jumlah tamu melebihi kapasitas kamar!", "error", 2000);
+    }
+}
+
+
+function getTotalGuestsForDateLocally(scheduler, roomId, checkDate) {
+    let appointments = scheduler.getDataSource().items(); // Ambil semua booking yang ada
+    let totalGuests = 0;
+    
+    console.log(`📆 Mencari booking di kamar ${roomId} untuk tanggal ${checkDate}`);
+
+    appointments.forEach(appointment => {
+        let start = new Date(appointment.startDate);
+        let end = new Date(appointment.endDate);
+        let check = new Date(checkDate);
+
+        console.log(`🕒 Booking Room ID: ${appointment.ghm_room_id}, Start: ${start}, End: ${end}`);
+
+        // Cek apakah checkDate berada dalam rentang startDate - endDate
+        if (appointment.ghm_room_id === roomId && check >= start && check <= end) {
+            let guestCount = safeArray(appointment.guest).length;
+            let familyCount = safeArray(appointment.family).length;
+            let employeeCount = safeArray(appointment.employee_id).length;
+
+            console.log(`✔️ Ditemukan booking dalam rentang tanggal: Guest=${guestCount}, Family=${familyCount}, Employee=${employeeCount}`);
+
+            totalGuests += guestCount + familyCount + employeeCount;
+        }
+    });
+
+    console.log(`✅ Total tamu di kamar ${roomId} pada ${checkDate}: ${totalGuests}`);
+    return totalGuests;
+}
+
+// Fungsi untuk membandingkan tanggal tanpa memperhitungkan waktu
+function isSameDate(date1, date2) {
+    let d1 = new Date(date1);
+    let d2 = new Date(date2);
+    return d1.toDateString() === d2.toDateString();
+}
 
 function updateScheduler(location, roomId) {
     let dataSource = roomsWithLocations.filter(emp => emp.location === location);
@@ -107,6 +198,9 @@ function updateScheduler(location, roomId) {
         currentView: 'month',
         currentDate: new Date(),
         firstDayOfWeek: 1,
+        startDayHour: 10,
+        endDayHour: 22,
+        // firstDayOfWeek: 1,
         showAllDayPanel: false,
         height: 710,
         groups: ['ghm_room_id'],
@@ -128,10 +222,17 @@ function updateScheduler(location, roomId) {
             const booking = model.appointmentData;
             const room = roomsWithLocations.find(room => room.id === booking.ghm_room_id);
             const roomAccupancy = room?.roomAccupancy || 0;
-
-            const totalPeople = booking.totalPeople ?? 0;
+        
+            // Hitung total orang di booking
+            const guestCount = safeArray(booking.guest).length;
+            const familyCount = safeArray(booking.family).length;
+            const employeeCount = safeArray(booking.employee_id).length;
+            const totalPeople = guestCount + familyCount + employeeCount;
+        
+            // Hitung sisa kapasitas kamar
             const remainingCapacity = roomAccupancy - totalPeople;
-
+        
+            // Format tanggal dengan aman
             const formatDate = (date) => {
                 if (!date) return "No Date";
                 const d = new Date(date);
@@ -142,25 +243,25 @@ function updateScheduler(location, roomId) {
             const deleteButtonId = `delete-btn-${booking.id}`;
             const tooltipHtml = `
                 <div>
-                    <b>Subject : ${booking.text || "No Title"}</b><br>
+                    <b>Subject: ${booking.text || "No Title"}</b><br>
                     ${formatDate(booking.startDate)} - ${formatDate(booking.endDate)}<br>
-                    Accupancy: ${roomAccupancy} Person"<br>
-                    Person: ${booking.totalPeople || "No Name"} Person<br>
-                    remaining: ${remainingCapacity} Person<br>                    
-                    Created By: ${booking.creator || "No Name"}<br><br>
+                    <b>Accupancy:</b> ${roomAccupancy} Person<br>
+                    <b>Booked:</b> ${totalPeople} Person<br>
+                    <b>Remaining:</b> ${remainingCapacity} Person<br>
+                    <b>Created By:</b> ${booking.creator || "No Name"}<br><br>
                     <button id="${deleteButtonId}" class="btn btn-danger btn-sm">Delete</button>
                 </div>
             `;
         
-            // Event listener harus ditambahkan setelah tooltip muncul
+            // Tambahkan event listener untuk tombol delete setelah tooltip muncul
             setTimeout(() => {
                 const deleteButton = document.getElementById(deleteButtonId);
                 if (deleteButton) {
-                    deleteButton.addEventListener("click", function (event) {
+                    deleteButton.addEventListener("click", function(event) {
                         event.stopPropagation(); // Mencegah popup scheduler terbuka
                         if (confirm("Are you sure you want to delete this booking?")) {
                             sendRequest(apiurl + "/" + modname + "/" + booking.id, "DELETE")
-                                .then(function (response) {
+                                .then(function(response) {
                                     if (response.status === "success") {
                                         alert("Booking deleted successfully!");
                                         $("#scheduler").dxScheduler("instance").getDataSource().reload();
@@ -168,13 +269,13 @@ function updateScheduler(location, roomId) {
                                         alert("Error: " + (response.message || "Failed to delete booking."));
                                     }
                                 })
-                                .catch(function (error) {
+                                .catch(function(error) {
                                     alert("Error: " + (error.responseText || "Unknown error."));
                                 });
                         }
                     });
                 }
-            }, 500); // Timeout agar DOM siap
+            }, 500); // Timeout untuk memastikan DOM sudah siap
         
             return tooltipHtml;
         },
@@ -198,45 +299,63 @@ function updateScheduler(location, roomId) {
             const name = $('<div>')
                 .addClass('name')                    
                 .append($('<h2>').text(cellData.text));
-            
+        
             const roomAccupancy = $('<div>')
                 .addClass('roomAccupancy')
                 .html(`Bed: ${cellData.data.roomAccupancy}`);
         
-            // Create a parent div to combine name and roomAccupancy into a single column
-            const combinedColumn = $('<div>')
-            .addClass('combined-column')
-            .append(name, roomAccupancy)
-            .css({ backgroundColor: cellData.color });
+            // Tentukan warna berdasarkan jumlah bed
+            let bgColor;
+            if (cellData.data.roomAccupancy == 4) {
+                bgColor = "#4caf50"; // Hijau untuk kamar dengan banyak bed
+            } else if (cellData.data.roomAccupancy == 3) {
+                bgColor = "#ff9800"; // Oranye untuk kamar dengan kapasitas sedang            
+            } else if (cellData.data.roomAccupancy == 2) {
+                bgColor = "#ff9800"; // Oranye untuk kamar dengan kapasitas sedang
+            } else {
+                bgColor = "#f44336"; // Merah untuk kamar dengan kapasitas sedikit
+            }
         
+            const combinedColumn = $('<div>')
+                .addClass('combined-column')
+                .append(name, roomAccupancy)
+                .css({
+                    backgroundColor: bgColor,
+                    padding: '10px',
+                    borderRadius: '5px',
+                    color: '#fff',
+                    textAlign: 'center'
+            });
+
             return combinedColumn;
         },
         onCellPrepared: function(e) {
-            if (e.column.index == 0 && e.rowType == "data") {
-                if (e.data.code === null) {
-                    $("#formdata").dxDataGrid('columnOption', 'code', 'visible', false);
-                } else {
-                    $("#formdata").dxDataGrid('columnOption', 'code', 'visible', true);
-                }
+            // **Sembunyikan kolom 'code' jika null**
+            if (e.rowType == "data" && e.column.dataField === "code") {
+                const isCodeVisible = e.data.code !== null;
+                $("#formdata").dxDataGrid('columnOption', 'code', 'visible', isCodeVisible);
             }
+        
+            // **Tandai sel kosong dengan warna merah muda**
             if (e.rowType == "data" && (e.column.index > 0 && e.column.index < 6)) {
-                if (e.value === "" || e.value === null || e.value === undefined || /^\s*$/.test(e.value)) {
+                if (!e.value || /^\s*$/.test(e.value)) {
                     e.cellElement.css({
                         "backgroundColor": "#ffe6e6",
                         "border": "0.5px solid #f56e6e"
                     });
                 }
             }
-            if (e.rowType == "data") {
-                if (e.data.isParent === 1) {
-                    e.cellElement.css('background', 'rgba(128, 128, 0,0.1)');
-                }
+        
+            // **Tandai baris dengan `isParent === 1`**
+            if (e.rowType == "data" && e.data.isParent === 1) {
+                e.cellElement.css('background', 'rgba(128, 128, 0, 0.1)');
             }
         },
         onAppointmentFormOpening: function(e) {
             const form = e.form;
             const appointmentData = e.appointmentData;
-            const isNewAppointment = !appointmentData.id;
+            // const isNewAppointment = !appointmentData.id;
+
             console.log('Appointment Data:', appointmentData); // Debug log
 
             if (appointmentData.employee_id && typeof appointmentData.employee_id === 'string') {
@@ -256,10 +375,27 @@ function updateScheduler(location, roomId) {
             } else if (!appointmentData.family) {
                 appointmentData.family = []; // Inisialisasi dengan string kosong jika nilai `family` adalah `null` atau `undefined`
             }
-            // Define the groupCaptionTemplate function
-            function groupCaptionTemplate(param) {
-                // Function implementation here
-                return `Group Caption for ${param}`;
+
+            function validateBooking() {
+                let guestCount = (form.getEditor("guest")?.option("value") || []).length;
+                let familyCount = (form.getEditor("family")?.option("value") || []).length;
+                let employeeCount = (form.getEditor("employee_id")?.option("value") || []).length;
+
+                let totalGuests = guestCount + familyCount + employeeCount;
+                console.log("total guest",totalGuests);
+                let selectedRoom = form.getEditor("ghm_room_id")?.option("value");
+                // let roomAccupancy = room?.roomAccupancy || 0;
+                let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomAccupancy || 0;
+                console.log("total Kaps",roomCapacity);
+        
+                let doneButton = $(".dx-popup-bottom .dx-button.dx-popup-done");
+        
+                if (totalGuests > roomCapacity) {
+                    // doneButton.addClass("dx-state-disabled");
+                    DevExpress.ui.notify("Jumlah tamu melebihi kapasitas kamar!", "error", 2000);
+                // } else { 
+                    // doneButton.removeClass("dx-state-disabled");
+                }
             }
             
             form.option('items', [
@@ -294,7 +430,7 @@ function updateScheduler(location, roomId) {
                             }
                         },                            
                     ]
-                },                
+                },
                 {
                     itemType: 'group',
                     caption: 'Room & Date',
@@ -307,7 +443,8 @@ function updateScheduler(location, roomId) {
                                 dataSource: roomsWithLocations,
                                 displayExpr: 'text',
                                 valueExpr: 'id',
-                                value: appointmentData.ghm_room_id || null
+                                value: appointmentData.ghm_room_id || null,
+                                onValueChanged: validateBooking
                             }
                         },
                         {
@@ -316,7 +453,7 @@ function updateScheduler(location, roomId) {
                             dataField: 'startDate',
                             editorOptions: {
                                 type: 'datetime',
-                                value: appointmentData.startDate || new Date(),
+                                value: appointmentData.startDate,
                                 displayFormat: 'yyyy-MM-dd HH:mm:ss',
                                 dateSerializationFormat: 'yyyy-MM-ddTHH:mm:ssZ'
                             }
@@ -327,11 +464,12 @@ function updateScheduler(location, roomId) {
                             dataField: 'endDate',
                             editorOptions: {
                                 type: 'datetime',
-                                value: appointmentData.endDate || new Date(),
+                                value: appointmentData.endDate,
                                 displayFormat: 'yyyy-MM-dd HH:mm:ss',
                                 dateSerializationFormat: 'yyyy-MM-ddTHH:mm:ssZ'
                             }
                         },
+                                                
                     ]
                 },
                 {
@@ -349,21 +487,22 @@ function updateScheduler(location, roomId) {
                                 displayExpr: function(item) {
                                     if (!item) return "";
                                     const department = departments.find(dept => dept.id === item.department_id);
-                                    return `${item.FullName} | ${item.SAPID} | ${department ? department.DepartmentName : "Failed"}`;
+                                    return `${item.FullName} | ${item.SAPID} | ${department ? department.DepartmentName : "Failed"}`;                                    
                                 },
                                 valueExpr: 'id',
                                 value: Array.isArray (appointmentData.employee_id) ? appointmentData.employee_id : [],
                                 showSelectionControls: true,
                                 applyValueMode: 'useButtons',
-                                searchEnabled: true
-                            }
-                            
+                                searchEnabled: true,
+                                onValueChanged: validateBooking
+                            }                            
                         },
                         {                                        
                             title: 'Guest',
                             editorType: 'dxTagBox',
                             dataField: 'guest',
                             editorOptions: {
+                                dataSource: [],
                                 value: Array.isArray(appointmentData.guest) ? appointmentData.guest : [],
                                 acceptCustomValue: true,
                                 searchEnabled: true,
@@ -379,7 +518,11 @@ function updateScheduler(location, roomId) {
                                         args.customItem = null;
                                     }
                                     // appointmentData.guest = guests;
+                                    // let newFormData = { ...form.option('fromData'), guest: newGuestList } ;
+                                    // form.option('formData', newFormData);
                                     form.updateData('guest', guests);
+                                    validateBooking();
+                                    // form.repaint();
                                 }
                             }
                         },                            
@@ -389,6 +532,7 @@ function updateScheduler(location, roomId) {
                             editorType: 'dxTagBox',
                             dataField: 'family',
                             editorOptions: {
+                                dataSource: [],
                                 value: Array.isArray(appointmentData.family) ? appointmentData.family : [],
                                 acceptCustomValue: true,
                                 searchEnabled: true,
@@ -404,21 +548,87 @@ function updateScheduler(location, roomId) {
                                         args.customItem = null;
                                     }
                                     // appointmentData.family = familys;
+                                    // let newFormData = { ...form.option('fromData'), guest: newGuestList } ;
+                                    // form.option('formData', newFormData);
                                     form.updateData('family', familys);
+                                    // form.repaint();
+                                    validateBooking();
                                 }
                             }
                         } 
                     ]
                 }                         
             ]);
+
+            setTimeout(validateBooking,100);
         },
-        onAppointmentAdding: function(e) {
-            const appointmentData = e.appointmentData;
-            // appointmentData.employee_id = serializeToJSON(appointmentData.employee_id);
-            appointmentData.guest = serializeToJSON(appointmentData.guest);
-            appointmentData.family = serializeToJSON(appointmentData.family);
-            sendRequest(apiurl + "/" + modname, "POST", {
-                requestStatus: 0,
+        // Event saat user ingin menambahkan booking baru
+    onAppointmentAdding: function(e) {
+        const appointmentData = e.appointmentData;
+        let scheduler = e.component;
+
+        let guestCount = safeArray(appointmentData.guest).length;
+        let familyCount = safeArray(appointmentData.family).length;
+        let employeeCount = safeArray(appointmentData.employee_id).length;
+        let totalNewGuests = guestCount + familyCount + employeeCount;
+
+        let selectedRoom = appointmentData.ghm_room_id;
+        let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomAccupancy || 0;
+
+        // Hitung total tamu per hari dalam rentang booking baru
+        let dailyGuestCount = getTotalGuestsPerDay(scheduler, selectedRoom, appointmentData.startDate, appointmentData.endDate);
+
+        // Cek apakah ada hari di mana jumlah tamu melebihi kapasitas kamar
+        let bookingStart = new Date(appointmentData.startDate);
+        let bookingEnd = new Date(appointmentData.endDate);
+
+        for (let d = new Date(bookingStart); d <= bookingEnd; d.setDate(d.getDate() + 1)) {
+            let dateKey = d.toISOString().split("T")[0]; // Format YYYY-MM-DD
+            let totalGuestsAfterAdding = (dailyGuestCount[dateKey] || 0) + totalNewGuests;
+
+            if (totalGuestsAfterAdding > roomCapacity) {
+                e.cancel = true; // Batalkan booking
+                DevExpress.ui.notify(`Kapasitas penuh pada ${dateKey}! (${dailyGuestCount[dateKey] || 0}/${roomCapacity})`, "error", 3000);
+                return;
+            }
+        }
+
+        // Serialize array sebelum dikirim
+        appointmentData.guest = JSON.stringify(appointmentData.guest);
+        appointmentData.family = JSON.stringify(appointmentData.family);
+
+        // Kirim data booking ke server
+        sendRequest(apiurl + "/" + modname, "POST", {
+            requestStatus: 0,
+            text: appointmentData.text,
+            description: appointmentData.description,
+            startDate: appointmentData.startDate,
+            endDate: appointmentData.endDate,
+            ghm_room_id: appointmentData.ghm_room_id,
+            employee_id: appointmentData.employee_id,
+            guest: appointmentData.guest,
+            family: appointmentData.family
+        }).then(function(response) {
+            if (response.status === 'success') {
+                e.component._dataSource.reload();
+                DevExpress.ui.notify("Booking berhasil dibuat!", "success", 2000);
+            } else {
+                DevExpress.ui.notify("Error: " + response.message, "error", 3000);
+            }
+        }).catch(function(error) {
+            DevExpress.ui.notify("Error: " + error.responseText, "error", 3000);
+        });
+    },
+
+        // Event saat user ingin mengupdate booking
+        onAppointmentUpdating: function(e) {
+            const appointmentData = e.newData;
+            appointmentData.id = e.oldData.id;
+
+            appointmentData.guest = JSON.stringify(appointmentData.guest);
+            appointmentData.family = JSON.stringify(appointmentData.family);
+
+            sendRequest(apiurl + "/" + modname + "/" + appointmentData.id, "PUT", {
                 text: appointmentData.text,
                 description: appointmentData.description,
                 startDate: appointmentData.startDate,
@@ -426,11 +636,12 @@ function updateScheduler(location, roomId) {
                 ghm_room_id: appointmentData.ghm_room_id,
                 employee_id: appointmentData.employee_id,
                 guest: appointmentData.guest,
-                family: appointmentData.family
+                family: appointmentData.family,
+                id: appointmentData.id
             }).then(function(response) {
                 if (response.status === 'success') {
                     e.component._dataSource.reload();
-                    alert('Booking created successfully!');
+                    alert('Booking updated successfully!');
                 } else {
                     alert('Error: ' + response.message);
                 }
@@ -442,7 +653,7 @@ function updateScheduler(location, roomId) {
             const appointmentData = e.newData;
             appointmentData.id = e.oldData.id; // Ensure id is included in appointmentData for updating
             // appointmentData.employee_id = serializeToJSON(appointmentData.employee_id);
-            appointmentData.employee_id = Array.isArray(appointmentData.employee_id) ? JSON.stringify(appointmentData.employee_id):appointmentData.employee_id;
+            // appointmentData.employee_id = Array.isArray(appointmentData.employee_id) ? JSON.stringify(appointmentData.employee_id):appointmentData.employee_id;
             appointmentData.guest = Array.isArray(appointmentData.guest) ? JSON.stringify(appointmentData.guest):appointmentData.guest;
             appointmentData.family = Array.isArray(appointmentData.family) ? JSON.stringify(appointmentData.family):appointmentData.family;
             console.log('Updating appointment with data:', appointmentData); // Debug log
