@@ -1,28 +1,13 @@
-[Violation] 'setTimeout' handler took 183ms
-ghm_booking.js:259 [Violation] 'click' handler took 1497ms
-jquery-3.5.1.min.js:2  jQuery.Deferred exception: Cannot read properties of undefined (reading 'getDataSource') TypeError: Cannot read properties of undefined (reading 'getDataSource')
-    at http://localhost/devportal/public/assets/js/submission/ghm_booking.js:267:47
+ghm_booking:959 [Violation] Avoid using document.write().
+ghm_booking:1831 [Violation] Avoid using document.write().
+ghm_booking.js:192 Booking Data: 
+(24) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+jquery-3.5.1.min.js:2 [Violation] 'setTimeout' handler took 149ms
+ghm_booking.js:259 [Violation] 'click' handler took 1958ms
+jquery-3.5.1.min.js:2 
+ jQuery.Deferred exception: Cannot read properties of undefined (reading 'getDataSource') TypeError: Cannot read properties of undefined (reading 'getDataSource')
+    at http://localhost/devportal/public/assets/js/submission/ghm_booking.js:268:80
     at e (http://localhost/devportal/public/assets/js/jquery-3.5.1.min.js:2:36511)
-    at t (http://localhost/devportal/public/assets/js/jquery-3.5.1.min.js:2:36887) undefined
-S.Deferred.exceptionHook @ jquery-3.5.1.min.js:2
-t @ jquery-3.5.1.min.js:2
-setTimeout
-(anonymous) @ jquery-3.5.1.min.js:2
-c @ jquery-3.5.1.min.js:2
-fireWith @ jquery-3.5.1.min.js:2
-fire @ jquery-3.5.1.min.js:2
-c @ jquery-3.5.1.min.js:2
-fireWith @ jquery-3.5.1.min.js:2
-s.<computed> @ jquery-3.5.1.min.js:2
-(anonymous) @ ghm_booking:2314
-c @ jquery-3.5.1.min.js:2
-fireWith @ jquery-3.5.1.min.js:2
-l @ jquery-3.5.1.min.js:2
-(anonymous) @ jquery-3.5.1.min.js:2
-load
-send @ jquery-3.5.1.min.js:2
-ajax @ jquery-3.5.1.min.js:2
-sendRequest @ ghm_booking:2299
-(anonymous) @ ghm_booking.js:262
-jquery-3.5.1.min.js:2 [Violation] 'setTimeout' handler took 3296ms
-jquery-3.5.1.min.js:2 [Violation] 'setTimeout' handler took 5427ms
+    at http://localhost/devportal/public/assets/js/jquery-3.5.1.min.js:2:36887 undefined
+jquery-3.5.1.min.js:2 [Violation] 'setTimeout' handler took 1749ms
+jquery-3.5.1.min.js:2 [Violation] 'setTimeout' handler took 1588ms
