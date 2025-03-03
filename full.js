@@ -188,7 +188,39 @@ function updateScheduler(location, roomId) {
     if (roomId) {
         dataSource = dataSource.filter(emp => emp.id === roomId);
     }
+// Fungsi untuk reload scheduler
+function reloadScheduler() {
+    setTimeout(() => {
+        const schedulerElement = document.querySelector("#scheduler");
+        if (schedulerElement) {
+            const scheduler = $("#scheduler").dxScheduler("instance");
+            if (scheduler) {
+                scheduler.getDataSource().reload().done(() => scheduler.repaint());
+            } else {
+                console.error("Scheduler instance is undefined.");
+            }
+        } else {
+            console.error("Scheduler element not found in DOM.");
+        }
+    }, 500); // Delay agar DOM diperbarui dulu
+}
+// Fungsi untuk menghapus booking
+function deleteBooking(bookingId) {
+    if (!confirm("Are you sure you want to delete this booking?")) return;
 
+    sendRequest(apiurl + "/" + modname + "/" + bookingId, "DELETE")
+        .then(response => {
+            if (response.status === "success") {
+                alert("Booking deleted successfully!");
+                reloadScheduler(); // Reload setelah sukses delete
+            } else {
+                alert("Error: " + (response.message || "Failed to delete booking."));
+            }
+        })
+        .catch(error => {
+            alert("Error: " + (error.responseText || "Unknown error."));
+        });
+}
     console.log('Booking Data:', booking); // Debug log for bookings
 
     $('.scheduler').dxScheduler({
@@ -218,6 +250,7 @@ function updateScheduler(location, roomId) {
             allowUpdating: true,
             allowDeleting: true,
         },
+        
         appointmentTooltipTemplate: function(model) {
             const booking = model.appointmentData;
             const room = roomsWithLocations.find(room => room.id === booking.ghm_room_id);
@@ -253,29 +286,34 @@ function updateScheduler(location, roomId) {
                 </div>
             `;
         
-            // Tambahkan event listener untuk tombol delete setelah tooltip muncul
-            setTimeout(() => {
+            // Gunakan MutationObserver untuk memastikan tombol tersedia di DOM
+            const observer = new MutationObserver((mutations) => {
                 const deleteButton = document.getElementById(deleteButtonId);
                 if (deleteButton) {
                     deleteButton.addEventListener("click", function(event) {
                         event.stopPropagation(); // Mencegah popup scheduler terbuka
+                        event.preventDefault();
+        
                         if (confirm("Are you sure you want to delete this booking?")) {
                             sendRequest(apiurl + "/" + modname + "/" + booking.id, "DELETE")
-                                .then(function(response) {
+                                .then(response => {
                                     if (response.status === "success") {
                                         alert("Booking deleted successfully!");
-                                        $("#scheduler").dxScheduler("instance").getDataSource().reload();
+                                        reloadScheduler(); // Panggil fungsi untuk reload scheduler
                                     } else {
                                         alert("Error: " + (response.message || "Failed to delete booking."));
                                     }
                                 })
-                                .catch(function(error) {
+                                .catch(error => {
                                     alert("Error: " + (error.responseText || "Unknown error."));
                                 });
                         }
                     });
+                    observer.disconnect(); // Hentikan observer setelah tombol ditemukan
                 }
-            }, 500); // Timeout untuk memastikan DOM sudah siap
+            });
+        
+            observer.observe(document.body, { childList: true, subtree: true });
         
             return tooltipHtml;
         },
@@ -398,7 +436,7 @@ function updateScheduler(location, roomId) {
                 }
             }
             
-            form.option('items', [
+            form.option('items', [                
                 {
                     itemType: 'group',
                     colCount: 1,
@@ -406,10 +444,10 @@ function updateScheduler(location, roomId) {
                     items: [
                         {
                             label: { text: 'Code' },
-                            editorType: 'dxTextBox',
+                            // editorType: 'dxTextBox',
                             dataField: 'code',
-                            disabled: true,
                             editorOptions: {
+                                readOnly: true,
                                 value: appointmentData.code || ''
                             }
                         },
@@ -557,7 +595,26 @@ function updateScheduler(location, roomId) {
                             }
                         } 
                     ]
-                }                         
+                },
+                {
+                    itemType: 'group',
+                    colSpan: 2,                    
+                    items: [                        
+                        {                                        
+                            title: 'Form Action',
+                            editorType: 'dxButton',
+                            editorOptions: {
+                                text: 'Submit Booking',
+                                type: 'success',
+                                useSubmitBehavior: true,
+                                onClick: function() {
+                                    
+                                }
+                            }
+                        }
+                        
+                    ]
+                },                         
             ]);
 
             setTimeout(validateBooking,100);
@@ -619,44 +676,48 @@ function updateScheduler(location, roomId) {
             DevExpress.ui.notify("Error: " + error.responseText, "error", 3000);
         });
     },
-
-        // Event saat user ingin mengupdate booking
-        onAppointmentUpdating: function(e) {
+        onAppointmentUpdating: function(e) {            
             const appointmentData = e.newData;
-            appointmentData.id = e.oldData.id;
-
-            appointmentData.guest = JSON.stringify(appointmentData.guest);
-            appointmentData.family = JSON.stringify(appointmentData.family);
-
-            sendRequest(apiurl + "/" + modname + "/" + appointmentData.id, "PUT", {
-                text: appointmentData.text,
-                description: appointmentData.description,
-                startDate: appointmentData.startDate,
-                endDate: appointmentData.endDate,
-                ghm_room_id: appointmentData.ghm_room_id,
-                employee_id: appointmentData.employee_id,
-                guest: appointmentData.guest,
-                family: appointmentData.family,
-                id: appointmentData.id
-            }).then(function(response) {
-                if (response.status === 'success') {
-                    e.component._dataSource.reload();
-                    alert('Booking updated successfully!');
-                } else {
-                    alert('Error: ' + response.message);
-                }
-            }).catch(function(error) {
-                alert('Error: ' + error.responseText);
-            });
-        },
-        onAppointmentUpdating: function(e) {
-            const appointmentData = e.newData;
-            appointmentData.id = e.oldData.id; // Ensure id is included in appointmentData for updating
+            const formatDateForDB = (date) => {
+                const d = new Date(date);
+                return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
+            };
+            appointmentData.startDate = formatDateForDB(appointmentData.startDate);
+            appointmentData.endDate = formatDateForDB(appointmentData.endDate);
+            appointmentData.id = e.oldData.id; // Ensure id is included in appointmentData for updating            
             // appointmentData.employee_id = serializeToJSON(appointmentData.employee_id);
             // appointmentData.employee_id = Array.isArray(appointmentData.employee_id) ? JSON.stringify(appointmentData.employee_id):appointmentData.employee_id;
             appointmentData.guest = Array.isArray(appointmentData.guest) ? JSON.stringify(appointmentData.guest):appointmentData.guest;
             appointmentData.family = Array.isArray(appointmentData.family) ? JSON.stringify(appointmentData.family):appointmentData.family;
             console.log('Updating appointment with data:', appointmentData); // Debug log
+            var newTicketStatus = e.newData.ticketStatus;
+            var newConfirmationStatus = e.newData.confirmationStatus;
+            if (newTicketStatus === "Completed") {
+                if (!confirm("Are you sure you want to mark this ticket as completed?")) {
+                    e.cancel = true; // Cancel the update operation
+                } else {
+                    e.newData.confirmationStatus = 'Waiting'; // Update the confirmationStatus to 'Waiting'
+                    e.component.columnOption("ticketStatus", "allowEditing", false);                                }
+            }
+            if (newConfirmationStatus === "Reworked") {
+                if (!confirm("Are you sure you want to mark this confirmation status as reworked?")) {
+                    e.cancel = true; // Cancel the update operation
+                } else {
+                    e.newData.ticketStatus = 'On Queue'; // Update the ticket status to 'On Queue'
+                    e.component.columnOption("confirmationStatus", "allowEditing", false);
+                    e.component.columnOption("confirmationRemarks", "allowEditing", false);
+                }
+            }
+            if (newConfirmationStatus === "Completed") {
+                if (!confirm("Are you sure you want to mark this confirmation status as completed?")) {
+                    e.cancel = true; // Cancel the update operation
+                } else {
+                    e.component.columnOption("confirmationStatus", "allowEditing", false);
+                    e.component.columnOption("confirmationRemarks", "allowEditing", false);
+                }
+            }
+        
+
             sendRequest(apiurl + "/" + modname + "/" + appointmentData.id, "PUT", {
                 text: appointmentData.text,
                 description: appointmentData.description,
@@ -670,7 +731,7 @@ function updateScheduler(location, roomId) {
             }).then(function(response) {
                 console.log('Response from updating appointment:', response); // Debug log
                 if (response.status === 'success') {
-                    e.component._dataSource.reload();
+                    e.component.repaint();
                     alert('Booking updated successfully!');
                 } else {
                     alert('Error: ' + response.message);
@@ -708,3 +769,126 @@ updateRoomSelector(uniqueLocations[0]);
         });
     });
 });
+// jalankan ini kawan
+function btnreqsubmit(reqid, mode) {
+    var btnSubmit = $('#btn-submit');
+    btnSubmit.prop('disabled', true);
+    var actionForm = (mode == 'approval') ? 'approval' : 'submission';
+    
+    var valapprovalAction = $('input[name="approvalaction"]:checked').val() || null;
+
+    if (mode == 'approval' && !valapprovalAction) {
+        alert('Please select approval action.');
+        btnSubmit.prop('disabled', false);
+        return false;
+    }
+
+    var valApprovalType = (valapprovalAction == 3) ? 'Approved' :
+                          (valapprovalAction == 2) ? 'Reworked' :
+                          (valapprovalAction == 4) ? 'Rejected' : '';
+
+    Swal.fire({
+        title: 'Are you sure?',
+        text: "Are you sure you want to send this submission?",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, send it!'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            showLoadingScreen();
+
+            if (typeof apiurl === "undefined" || typeof modelclass === "undefined") {
+                alert("API URL atau modelclass tidak tersedia!");
+                btnSubmit.prop('disabled', false);
+                hideLoadingScreen();
+                return;
+            }
+
+            sendRequest(apiurl + "/submissionrequest/" + reqid + "/" + modelclass, "POST", {
+                requestStatus: 1,
+                action: actionForm,
+                approvalAction: parseInt(valapprovalAction) || 1,
+                approvalType: valApprovalType,
+            }).then(function(response) {
+                btnSubmit.prop('disabled', false);
+                hideLoadingScreen();
+                
+                if (response.status === 'error') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: response.message || 'An error occurred.',
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Saved',
+                        text: 'The submission has been submitted.',
+                    });
+                    popup.hide();
+                }
+            });
+        } else {
+            btnSubmit.prop('disabled', false);
+            Swal.fire({
+                icon: 'error',
+                title: 'Cancelled',
+                text: 'The submission has been cancelled.',
+                confirmButtonColor: '#3085d6'
+            });
+            hideLoadingScreen();
+        }
+    });
+}
+function runpopup() {
+    popup = $('#popup').dxPopup({
+        contentTemplate: popupContentTemplate,
+        container: '.content',
+        showTitle: true,
+        title: 'Submission Detail',
+        visible: false,
+        dragEnabled: false,
+        hideOnOutsideClick: false,
+        showCloseButton: true,
+        fullScreen : false,
+        onShowing: function(e) {
+        },
+        onShown: function(e) {
+        },
+        onHidden: function(e) {
+            dataGrid.refresh();
+        },
+        toolbarItems: [
+            {
+                widget: 'dxButton',
+                toolbar: 'bottom',  // Set the button to the bottom toolbar
+                location: 'after',
+                options: {
+                    text: "Fullscreen",
+                    onClick: function() {
+                        if (popup.option("fullScreen")) {
+                            popup.option("fullScreen", false);
+                            this.option("text", "Enable Fullscreen");
+                        } else {
+                            popup.option("fullScreen", true);
+                            this.option("text", "Disable Fullscreen");
+                        }
+                    }
+                }
+            },
+            {
+                widget: 'dxButton',
+                toolbar: 'bottom',
+                location: 'after',
+                options: {
+                    text: 'Close',
+                    onClick() {
+                        popup.hide();
+                    },
+                },
+            }
+        ]
+    }).dxPopup('instance');
+}
