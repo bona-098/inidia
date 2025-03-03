@@ -1,3 +1,5 @@
+SQLSTATE[42000]: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]The multi-part identifier "tbl_assignment.employee_id" could not be bound. (SQL: select * from [request_ghm] where ([tbl_assignment].[employee_id] is null and [request_ghm].[requestStatus] in (3)) or [request_ghm].[user_id] = 7)
+
 public function dashboard()
     {
         $userId = auth()->user()->id;
