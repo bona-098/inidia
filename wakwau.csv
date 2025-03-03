@@ -1,4 +1,74 @@
-function validateBooking() {
+onAppointmentFormOpening: function(e) {
+            let defaultToolbarItems = e.popup.option('toolbarItems');
+            e.popup.option('toolbarItems', [
+                ...defaultToolbarItems,
+                {
+                widget: 'dxButton',
+                options: {
+                    text: 'Save as Draft',
+                    onClick: function () {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Saved as Draft',
+                        text: 'Appointment has been saved as draft.',
+                    });
+                    }
+                },
+                location: 'after'
+                },
+                {
+                widget: 'dxButton',
+                options: {
+                    text: 'Submit',
+                    onClick: function () {
+                    Swal.fire({
+                        title: 'Are you sure?',
+                        text: 'Are you sure you want to submit this appointment?',
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonColor: '#3085d6',
+                        cancelButtonColor: '#d33',
+                        confirmButtonText: 'Yes, submit it!'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                        e.component.addAppointment(e.appointmentData);
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Submitted',
+                            text: 'Appointment successfully submitted!',
+                        });
+                        }
+                    });
+                    }
+                },
+                location: 'after'
+                }
+            ]);
+            const form = e.form;
+            const appointmentData = e.appointmentData;
+            // const isNewAppointment = !appointmentData.id;
+
+            console.log('Appointment Data:', appointmentData); // Debug log
+
+            if (appointmentData.employee_id && typeof appointmentData.employee_id === 'string') {
+                appointmentData.employee_id = deserializeFromJSON(appointmentData.employee_id);
+            }
+            if (appointmentData.guest && typeof appointmentData.guest === 'string') {
+                // console.log(appointmentData.guest)
+                appointmentData.guest = deserializeFromJSON(appointmentData.guest);
+                // console.log(appointmentData.guest)
+            } else if (!appointmentData.guest) {
+                appointmentData.guest = []; // Inisialisasi dengan string kosong jika nilai `guest` adalah `null` atau `undefined`
+            }
+            if (appointmentData.family && typeof appointmentData.family === 'string') {
+                // console.log(appointmentData.family)
+                appointmentData.family = deserializeFromJSON(appointmentData.family);
+                // console.log(appointmentData.family)
+            } else if (!appointmentData.family) {
+                appointmentData.family = []; // Inisialisasi dengan string kosong jika nilai `family` adalah `null` atau `undefined`
+            }
+
+            function validateBooking() {
                 let guestCount = (form.getEditor("guest")?.option("value") || []).length;
                 let familyCount = (form.getEditor("family")?.option("value") || []).length;
                 let employeeCount = (form.getEditor("employee_id")?.option("value") || []).length;
@@ -20,8 +90,167 @@ function validateBooking() {
                 }
             }
             
-            form.option('items', [  
-{
+            form.option('items', [                
+                {
+                    itemType: 'group',
+                    colCount: 1,
+                    caption: 'Interests',
+                    items: [
+                        {
+                            label: { text: 'Code' },
+                            // editorType: 'dxTextBox',
+                            dataField: 'code',
+                            editorOptions: {
+                                readOnly: true,
+                                value: appointmentData.code || ''
+                            }
+                        },
+                        {
+                            label: { text: 'Subject' },
+                            editorType: 'dxTextBox',
+                            dataField: 'text',
+                            editorOptions: {
+                                value: appointmentData.text || ''
+                            }
+                        },
+                        {
+                            label: { text: 'Description' },
+                            editorType: 'dxTextArea',
+                            dataField: 'description',
+                            editorOptions: {
+                                value: appointmentData.description || ''
+                            }
+                        },                            
+                    ]
+                },
+                {
+                    itemType: 'group',
+                    caption: 'Room & Date',
+                    items: [
+                        {
+                            label: { text: 'Room' },
+                            editorType: 'dxSelectBox',
+                            dataField: 'ghm_room_id',
+                            editorOptions: {
+                                dataSource: roomsWithLocations,
+                                displayExpr: 'text',
+                                valueExpr: 'id',
+                                value: appointmentData.ghm_room_id || null,
+                                onValueChanged: validateBooking
+                            }
+                        },
+                        {
+                            label: { text: 'Start Date' },
+                            editorType: 'dxDateBox',
+                            dataField: 'startDate',
+                            editorOptions: {
+                                type: 'datetime',
+                                value: appointmentData.startDate,
+                                displayFormat: 'yyyy-MM-dd HH:mm:ss',
+                                dateSerializationFormat: 'yyyy-MM-ddTHH:mm:ssZ'
+                            }
+                        },
+                        {
+                            label: { text: 'End Date' },
+                            editorType: 'dxDateBox',
+                            dataField: 'endDate',
+                            editorOptions: {
+                                type: 'datetime',
+                                value: appointmentData.endDate,
+                                displayFormat: 'yyyy-MM-dd HH:mm:ss',
+                                dateSerializationFormat: 'yyyy-MM-ddTHH:mm:ssZ'
+                            }
+                        },
+                                                
+                    ]
+                },
+                {
+                    itemType: 'group',
+                    colSpan: 2,
+                    caption: 'Guest Type',
+                    items: [
+                        {                                
+                            title: 'Employee',
+                            label: { text: 'Employee' },
+                            editorType: 'dxTagBox',
+                            dataField: 'employee_id',
+                            editorOptions: {                                                
+                                dataSource: emplo,
+                                displayExpr: function(item) {
+                                    if (!item) return "";
+                                    const department = departments.find(dept => dept.id === item.department_id);
+                                    return `${item.FullName} | ${item.SAPID} | ${department ? department.DepartmentName : "Failed"}`;                                    
+                                },
+                                valueExpr: 'id',
+                                value: Array.isArray (appointmentData.employee_id) ? appointmentData.employee_id : [],
+                                showSelectionControls: true,
+                                applyValueMode: 'useButtons',
+                                searchEnabled: true,
+                                onValueChanged: validateBooking
+                            }                            
+                        },
+                        {                                        
+                            title: 'Guest',
+                            editorType: 'dxTagBox',
+                            dataField: 'guest',
+                            editorOptions: {
+                                dataSource: [],
+                                value: Array.isArray(appointmentData.guest) ? appointmentData.guest : [],
+                                acceptCustomValue: true,
+                                searchEnabled: true,
+                                showSelectionControls: true,
+                                applyValueMode: 'useButtons',
+                                onCustomItemCreating: function(args) {
+                                    let newValue = args.text;
+                                    let guests = form.option('formData').guest || [];
+                                    if (!guests.includes(newValue)) {
+                                        guests.push(newValue);
+                                        args.customItem = newValue;
+                                    } else {
+                                        args.customItem = null;
+                                    }
+                                    // appointmentData.guest = guests;
+                                    // let newFormData = { ...form.option('fromData'), guest: newGuestList } ;
+                                    // form.option('formData', newFormData);
+                                    form.updateData('guest', guests);
+                                    validateBooking();
+                                    // form.repaint();
+                                }
+                            }
+                        },                            
+                        {
+                            // label: { text: 'Family' },
+                            title: 'Family',
+                            editorType: 'dxTagBox',
+                            dataField: 'family',
+                            editorOptions: {
+                                dataSource: [],
+                                value: Array.isArray(appointmentData.family) ? appointmentData.family : [],
+                                acceptCustomValue: true,
+                                searchEnabled: true,
+                                showSelectionControls: true,
+                                applyValueMode: 'useButtons',
+                                onCustomItemCreating: function(args) {
+                                    let newValue = args.text;
+                                    let familys = form.option('formData').family || [];
+                                    if (!familys.includes(newValue)) {
+                                        familys.push(newValue);
+                                        args.customItem = newValue;
+                                    } else {
+                                        args.customItem = null;
+                                    }
+                                    // appointmentData.family = familys;
+                                    // let newFormData = { ...form.option('fromData'), guest: newGuestList } ;
+                                    // form.option('formData', newFormData);
+                                    form.updateData('family', familys);
+                                    // form.repaint();
+                                    validateBooking();
+                                }
+                            }
+                        } 
+                    ]
+                },
+                {
                     itemType: 'group',
                     colSpan: 2,                    
                     items: [                        
@@ -44,64 +273,3 @@ function validateBooking() {
 
             setTimeout(validateBooking,100);
         },
-// jalankan ini kawan
-function btnreqsubmit(reqid,mode) {
-
-    var btnSubmit = $('#btn-submit');
-    btnSubmit.prop('disabled', true);
-    var actionForm = (mode == 'approval') ? 'approval' : 'submission';
-
-    if(mode == 'approval') {
-        var valapprovalAction = $('input[name="approvalaction"]:checked').val(); // mengambil nilai dari radio button
-       
-        if (!valapprovalAction) {
-            alert('Please select approval action.')
-            btnSubmit.prop('disabled', false);
-            return false;
-        }
-    }
-
-    var valApprovalType = valapprovalAction == 3 ? 'Approved' : valapprovalAction == 2 ? 'Reworked' : valapprovalAction == 4 ? 'Rejected' : '';
-    Swal.fire({
-        title: 'Are you sure?',
-        text: "Are you sure you want to send this submission?",
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Yes, send it!'
-      }).then((result) => {
-        if (result.isConfirmed) {
-            showLoadingScreen();
-            sendRequest(apiurl + "/submissionrequest/"+reqid+"/"+modelclass, "POST", {
-                requestStatus:1,
-                action: actionForm,
-                approvalAction: (valapprovalAction == null) ? 1 : parseInt(valapprovalAction),
-                approvalType: valApprovalType,
-          }).then(function(response){
-                if(response.status == 'error') {
-                    btnSubmit.prop('disabled', false);
-                    hideLoadingScreen();
-                } else {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Saved',
-                        text: 'The submission has been submited.',
-                    });
-                    popup.hide();
-                    hideLoadingScreen();
-                }
-          });
-        } else {
-            btnSubmit.prop('disabled', false);
-            Swal.fire({
-                icon: 'error',
-                title: 'Cancelled',
-                text: 'The submission has been cancelled.',
-                confirmButtonColor: '#3085d6'
-            });
-            hideLoadingScreen();
-        }
-      });
-
-}
