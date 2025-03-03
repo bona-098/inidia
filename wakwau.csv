@@ -1,13 +1,61 @@
-ghm_booking:959 [Violation] Avoid using document.write().
-ghm_booking:1831 [Violation] Avoid using document.write().
-ghm_booking.js:192 Booking Data: 
-(24) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
-jquery-3.5.1.min.js:2 [Violation] 'setTimeout' handler took 149ms
-ghm_booking.js:259 [Violation] 'click' handler took 1958ms
-jquery-3.5.1.min.js:2 
- jQuery.Deferred exception: Cannot read properties of undefined (reading 'getDataSource') TypeError: Cannot read properties of undefined (reading 'getDataSource')
-    at http://localhost/devportal/public/assets/js/submission/ghm_booking.js:268:80
-    at e (http://localhost/devportal/public/assets/js/jquery-3.5.1.min.js:2:36511)
-    at http://localhost/devportal/public/assets/js/jquery-3.5.1.min.js:2:36887 undefined
-jquery-3.5.1.min.js:2 [Violation] 'setTimeout' handler took 1749ms
-jquery-3.5.1.min.js:2 [Violation] 'setTimeout' handler took 1588ms
+// jalankan ini kawan
+function btnreqsubmit(reqid,mode) {
+
+    var btnSubmit = $('#btn-submit');
+    btnSubmit.prop('disabled', true);
+    var actionForm = (mode == 'approval') ? 'approval' : 'submission';
+
+    if(mode == 'approval') {
+        var valapprovalAction = $('input[name="approvalaction"]:checked').val(); // mengambil nilai dari radio button
+       
+        if (!valapprovalAction) {
+            alert('Please select approval action.')
+            btnSubmit.prop('disabled', false);
+            return false;
+        }
+    }
+
+    var valApprovalType = valapprovalAction == 3 ? 'Approved' : valapprovalAction == 2 ? 'Reworked' : valapprovalAction == 4 ? 'Rejected' : '';
+    Swal.fire({
+        title: 'Are you sure?',
+        text: "Are you sure you want to send this submission?",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, send it!'
+      }).then((result) => {
+        if (result.isConfirmed) {
+            showLoadingScreen();
+            sendRequest(apiurl + "/submissionrequest/"+reqid+"/"+modelclass, "POST", {
+                requestStatus:1,
+                action: actionForm,
+                approvalAction: (valapprovalAction == null) ? 1 : parseInt(valapprovalAction),
+                approvalType: valApprovalType,
+          }).then(function(response){
+                if(response.status == 'error') {
+                    btnSubmit.prop('disabled', false);
+                    hideLoadingScreen();
+                } else {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Saved',
+                        text: 'The submission has been submited.',
+                    });
+                    popup.hide();
+                    hideLoadingScreen();
+                }
+          });
+        } else {
+            btnSubmit.prop('disabled', false);
+            Swal.fire({
+                icon: 'error',
+                title: 'Cancelled',
+                text: 'The submission has been cancelled.',
+                confirmButtonColor: '#3085d6'
+            });
+            hideLoadingScreen();
+        }
+      });
+
+}
