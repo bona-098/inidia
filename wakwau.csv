@@ -1,145 +1,46 @@
-// jalankan ini kawan
-function btnreqsubmit(reqid, mode) {
-    var btnSubmit = $('#btn-submit');
-    btnSubmit.prop('disabled', true);
-    var actionForm = (mode == 'approval') ? 'approval' : 'submission';
-    
-    var valapprovalAction = $('input[name="approvalaction"]:checked').val() || null;
-
-    if (mode == 'approval' && !valapprovalAction) {
-        alert('Please select approval action.');
-        btnSubmit.prop('disabled', false);
-        return false;
-    }
-
-    var valApprovalType = (valapprovalAction == 3) ? 'Approved' :
-                          (valapprovalAction == 2) ? 'Reworked' :
-                          (valapprovalAction == 4) ? 'Rejected' : '';
-
-    Swal.fire({
-        title: 'Are you sure?',
-        text: "Are you sure you want to send this submission?",
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Yes, send it!'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            showLoadingScreen();
-
-            if (typeof apiurl === "undefined" || typeof modelclass === "undefined") {
-                alert("API URL atau modelclass tidak tersedia!");
-                btnSubmit.prop('disabled', false);
-                hideLoadingScreen();
-                return;
-            }
-
-            sendRequest(apiurl + "/submissionrequest/" + reqid + "/" + modelclass, "POST", {
-                requestStatus: 1,
-                action: actionForm,
-                approvalAction: parseInt(valapprovalAction) || 1,
-                approvalType: valApprovalType,
-            }).then(function(response) {
-                btnSubmit.prop('disabled', false);
-                hideLoadingScreen();
-                
-                if (response.status === 'error') {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: response.message || 'An error occurred.',
-                    });
+onAppointmentUpdating: function(e) {            
+            const appointmentData = e.newData;
+            const formatDateForDB = (date) => {
+                const d = new Date(date);
+                return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
+            };
+            appointmentData.startDate = formatDateForDB(appointmentData.startDate);
+            appointmentData.endDate = formatDateForDB(appointmentData.endDate);
+            appointmentData.id = e.oldData.id; // Ensure id is included in appointmentData for updating            
+            // appointmentData.employee_id = serializeToJSON(appointmentData.employee_id);
+            // appointmentData.employee_id = Array.isArray(appointmentData.employee_id) ? JSON.stringify(appointmentData.employee_id):appointmentData.employee_id;
+            appointmentData.guest = Array.isArray(appointmentData.guest) ? JSON.stringify(appointmentData.guest):appointmentData.guest;
+            appointmentData.family = Array.isArray(appointmentData.family) ? JSON.stringify(appointmentData.family):appointmentData.family;
+            console.log('Updating appointment with data:', appointmentData); // Debug log
+            var newTicketStatus = e.newData.ticketStatus;
+            var newConfirmationStatus = e.newData.confirmationStatus;
+            if (newTicketStatus === "Completed") {
+                if (!confirm("Are you sure you want to mark this ticket as completed?")) {
+                    e.cancel = true; // Cancel the update operation
                 } else {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Saved',
-                        text: 'The submission has been submitted.',
-                    });
-                    popup.hide();
-                }
-            });
-        } else {
-            btnSubmit.prop('disabled', false);
-            Swal.fire({
-                icon: 'error',
-                title: 'Cancelled',
-                text: 'The submission has been cancelled.',
-                confirmButtonColor: '#3085d6'
-            });
-            hideLoadingScreen();
-        }
-    });
-}
-function runpopup() {
-    popup = $('#popup').dxPopup({
-        contentTemplate: popupContentTemplate,
-        container: '.content',
-        showTitle: true,
-        title: 'Submission Detail',
-        visible: false,
-        dragEnabled: false,
-        hideOnOutsideClick: false,
-        showCloseButton: true,
-        fullScreen : false,
-        onShowing: function(e) {
-        },
-        onShown: function(e) {
-        },
-        onHidden: function(e) {
-            dataGrid.refresh();
-        },
-        toolbarItems: [
-            {
-                widget: 'dxButton',
-                toolbar: 'bottom',  // Set the button to the bottom toolbar
-                location: 'after',
-                options: {
-                    text: "Fullscreen",
-                    onClick: function() {
-                        if (popup.option("fullScreen")) {
-                            popup.option("fullScreen", false);
-                            this.option("text", "Enable Fullscreen");
-                        } else {
-                            popup.option("fullScreen", true);
-                            this.option("text", "Disable Fullscreen");
-                        }
-                    }
-                }
-            },
-            {
-                widget: 'dxButton',
-                toolbar: 'bottom',
-                location: 'after',
-                options: {
-                    text: 'Close',
-                    onClick() {
-                        popup.hide();
-                    },
-                },
+                    e.newData.confirmationStatus = 'Waiting'; // Update the confirmationStatus to 'Waiting'
+                    e.component.columnOption("ticketStatus", "allowEditing", false);}
             }
-        ]
-    }).dxPopup('instance');
-}
+            if (newConfirmationStatus === "Reworked") {
+                if (!confirm("Are you sure you want to mark this confirmation status as reworked?")) {
+                    e.cancel = true; // Cancel the update operation
+                } else {
+                    e.newData.ticketStatus = 'On Queue'; // Update the ticket status to 'On Queue'
+                    e.component.columnOption("confirmationStatus", "allowEditing", false);
+                    e.component.columnOption("confirmationRemarks", "allowEditing", false);
+                }
+            }
+            if (newConfirmationStatus === "Completed") {
+                if (!confirm("Are you sure you want to mark this confirmation status as completed?")) {
+                    e.cancel = true; // Cancel the update operation
+                } else {
+                    e.component.columnOption("confirmationStatus", "allowEditing", false);
+                    e.component.columnOption("confirmationRemarks", "allowEditing", false);
+                }
+            }
+        
 
-// Kirim data booking ke server
-        Swal.fire({
-            title: 'What do you want to do?',
-            text: 'Choose an option for this booking',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Submit Now',
-            cancelButtonText: 'Save as Draft',
-            reverseButtons: true
-        }).then((result) => {
-            console.log("Swal result:", result); // Log the result object
-            let requestStatus = result.isConfirmed ? 2 : 0; // Correct assignment
-            let actionText = result.isConfirmed ? 'submitted' : 'saved as draft';
-        
-            console.log("Request Status:", requestStatus); // Cek apakah status benar
-        
-            sendRequest(apiurl + "/" + modname, "POST", {
-                requestStatus: requestStatus,
+            sendRequest(apiurl + "/" + modname + "/" + appointmentData.id, "PUT", {
                 text: appointmentData.text,
                 description: appointmentData.description,
                 startDate: appointmentData.startDate,
@@ -147,23 +48,18 @@ function runpopup() {
                 ghm_room_id: appointmentData.ghm_room_id,
                 employee_id: appointmentData.employee_id,
                 guest: appointmentData.guest,
-                family: appointmentData.family
+                family: appointmentData.family,
+                id: appointmentData.id // Ensure id is included in the request body
             }).then(function(response) {
+                console.log('Response from updating appointment:', response); // Debug log
                 if (response.status === 'success') {
-                    e.component._dataSource.reload();
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Success!',
-                        text: `Booking has been ${actionText}.`,
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
+                    e.component.repaint();
+                    alert('Booking updated successfully!');
                 } else {
-                    Swal.fire({ icon: 'error', title: 'Error', text: response.message });
+                    alert('Error: ' + response.message);
                 }
             }).catch(function(error) {
-                Swal.fire({ icon: 'error', title: 'Error', text: error.responseText });
+                console.error('Error from updating appointment:', error); // Debug log
+                alert('Error: ' + error.responseText);
             });
-        });
-        
-    },
+        }
