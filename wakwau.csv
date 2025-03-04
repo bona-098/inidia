@@ -1,57 +1,44 @@
-$statusColors = [
-            0 => '#6C757D', // Que (Abu)
-            1 => '#FFC107', // Pending (kuning)
-            2 => '#28A745', // Approved (hijau)
-            3 => '#DC3545', // Rejected (merah)
-            4 => '#007BFF', // Completed (biru)
-        ];
-
-        // Mapping booking data
-        $booking = $requests->map(function ($request) use ($rooms, $locations, $statusColors) {
-            $room = $rooms->firstWhere('id', $request->ghm_room_id);
-            $location = $room ? $locations->firstWhere('id', $room->location_id) : null;
-
-            return [
-                'id' => $request->id,
-                'text' => $request->text ?? '',
-                'guest' => $request->guest ?? 0,
-                'family' => $request->family ?? 0,
-                'employee_id' => $request->employee_id ?? null,
-                'ticketstatus' => $request->ticketStatus ?? null,
-                'completeddate' => $request->completeddate ?? null,
-                'confirmationStatus' => $request->confirmationStatus ?? null,
-                'description' => $request->description ?? '',
-                'requestStatus' => $request->requestStatus ?? 0,
-                'startDate' => optional($request->startDate)->toIso8601String(),
-                'endDate' => optional($request->endDate)->toIso8601String(),
-                'code' => optional($request->code)->code ?? null,
-                'creator' => optional($request->user)->fullname ?? null,
-                'ghm_room_id' => $request->ghm_room_id,
-                'roomName' => $room->roomName ?? null,
-                'location' => $location->Location ?? null,
-                'isMine' => $request->isMine ?? 0,
-                'isPendingOnMe' => $request->isPendingOnMe ?? 0,
-                'color' => $statusColors[$request->requestStatus] ?? '#6C757D', // Default abu-abu jika status tidak cocok
-            ];
-        });
-
-        // Mapping room data with locations
-        $roomsWithLocations = $rooms->map(function ($room) use ($locations, $booking, $statusColors) {
-            $location = $locations->firstWhere('id', $room->location_id);
-
-            // Cari semua request yang sesuai dengan room_id, lalu ambil yang terbaru
-            $requests = $booking->where('ghm_room_id', $room->id);
-            $latestRequest = $requests->sortByDesc('startDate')->first(); // Ambil request dengan startDate terbaru
-            
-            $requestStatus = optional($latestRequest)['requestStatus'] ?? 0;
-
-            return [
-                'text' => $room->roomName,
-                'id' => $room->id,
-                'requestStatus' => $requestStatus,
-                'roomAccupancy' => $room->roomAccupancy ?? 0,
-                'location' => $location ? $location->Location : null,
-                'color' => $statusColors[$requestStatus] ?? '#6C757D', // Default abu-abu jika status tidak cocok
-            ];
-        });
-        dd($roomsWithLocations); 
+  #items: array:36 [▼
+    0 => array:20 [▼
+      "id" => 360
+      "text" => ""
+      "guest" => 0
+      "family" => 0
+      "employee_id" => null
+      "ticketstatus" => null
+      "completeddate" => null
+      "confirmationStatus" => null
+      "description" => ""
+      "requestStatus" => "0"
+      "startDate" => "2025-03-19T10:00:00+08:00"
+      "endDate" => "2025-03-19T22:00:00+08:00"
+      "code" => null
+      "creator" => "KF Developer"
+      "ghm_room_id" => 1
+      "roomName" => "Kamar 1 "
+      "location" => "Balikpapan"
+      "isMine" => "1"
+      "isPendingOnMe" => 0
+      "color" => "#6C757D"
+    ]
+    1 => array:20 [▼
+      "id" => 358
+      "text" => "hijau"
+      "guest" => 0
+      "family" => 0
+      "employee_id" => null
+      "ticketstatus" => null
+      "completeddate" => null
+      "confirmationStatus" => null
+      "description" => "hijau"
+      "requestStatus" => "2"
+      "startDate" => "2025-03-01T10:00:00+08:00"
+      "endDate" => "2025-03-31T22:00:00+08:00"
+      "code" => null
+      "creator" => "KF Developer"
+      "ghm_room_id" => 3
+      "roomName" => "Kamar 3 "
+      "location" => "Balikpapan"
+      "isMine" => "1"
+      "isPendingOnMe" => 0
+      "color" => "#28A745"
