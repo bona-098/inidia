@@ -1,11 +1,39 @@
-// Mapping room data with locations
-        $statusColors = [
-            1 => '#FFC107', // Pending (kuning)
-            2 => '#28A745', // Approved (hijau)
-            3 => '#DC3545', // Rejected (merah)
-            4 => '#007BFF', // Completed (biru)
-        ];
+// Mapping booking data
+        $booking = $requests->map(function ($request) use ($rooms, $locations) {
+            $room = $rooms->firstWhere('id', $request->ghm_room_id);
+            $location = $room ? $locations->firstWhere('id', $room->location_id) : null;
+
+            return [
+                'id' => $request->id,
+                'text' => $request->text ?? '',
+                'guest' => $request->guest ?? 0,
+                'family' => $request->family ?? 0,
+                'employee_id' => $request->employee_id ?? null,
+                'ticketstatus' => $request->ticketStatus ?? null,
+                'completeddate' => $request->completeddate ?? null,
+                'confirmationStatus' => $request->confirmationStatus ?? null,
+                'description' => $request->description ?? '',
+                'requestStatus' => $request->requestStatus ?? 0,
+                'startDate' => optional($request->startDate)->toIso8601String(),
+                'endDate' => optional($request->endDate)->toIso8601String(),
+                'code' => optional($request->code)->code ?? null,
+                'creator' => optional($request->user)->fullname ?? null,
+                'ghm_room_id' => $request->ghm_room_id,
+                'roomName' => $room->roomName ?? null,
+                'location' => $location->Location ?? null,
+                'isMine' => $request->isMine ?? 0,
+                'isPendingOnMe' => $request->isPendingOnMe ?? 0,
+            ];
+        });
+
+        // Mapping room data with locations
         $roomsWithLocations = $rooms->map(function ($room) use ($locations, $booking) {
+            $statusColors = [
+                1 => '#FFC107', // Pending (kuning)
+                2 => '#28A745', // Approved (hijau)
+                3 => '#DC3545', // Rejected (merah)
+                4 => '#007BFF', // Completed (biru)
+            ];
             $location = $locations->firstWhere('id', $room->location_id);
             
             // Cari semua request yang sesuai dengan room_id
@@ -13,6 +41,7 @@
             
             // Ambil status request terbaru (atau pertama jika ada banyak)
             $requestStatus = optional($requests->first())['requestStatus'] ?? 0;
+            // dump($requestStatus);
             
             // Mapping warna berdasarkan requestStatus
             return [
