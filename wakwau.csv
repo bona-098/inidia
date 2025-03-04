@@ -1,44 +1,29 @@
-  #items: array:36 [▼
-    0 => array:20 [▼
-      "id" => 360
-      "text" => ""
-      "guest" => 0
-      "family" => 0
-      "employee_id" => null
-      "ticketstatus" => null
-      "completeddate" => null
-      "confirmationStatus" => null
-      "description" => ""
-      "requestStatus" => "0"
-      "startDate" => "2025-03-19T10:00:00+08:00"
-      "endDate" => "2025-03-19T22:00:00+08:00"
-      "code" => null
-      "creator" => "KF Developer"
-      "ghm_room_id" => 1
-      "roomName" => "Kamar 1 "
-      "location" => "Balikpapan"
-      "isMine" => "1"
-      "isPendingOnMe" => 0
-      "color" => "#6C757D"
-    ]
-    1 => array:20 [▼
-      "id" => 358
-      "text" => "hijau"
-      "guest" => 0
-      "family" => 0
-      "employee_id" => null
-      "ticketstatus" => null
-      "completeddate" => null
-      "confirmationStatus" => null
-      "description" => "hijau"
-      "requestStatus" => "2"
-      "startDate" => "2025-03-01T10:00:00+08:00"
-      "endDate" => "2025-03-31T22:00:00+08:00"
-      "code" => null
-      "creator" => "KF Developer"
-      "ghm_room_id" => 3
-      "roomName" => "Kamar 3 "
-      "location" => "Balikpapan"
-      "isMine" => "1"
-      "isPendingOnMe" => 0
-      "color" => "#28A745"
+$('.scheduler').dxScheduler({
+        timeZone: 'Asia/Makassar',
+        dataSource: booking,
+        views: ['month'],
+        currentView: 'month',
+        currentDate: new Date(),
+        firstDayOfWeek: 1,
+        startDayHour: 10,
+        endDayHour: 22,
+        colorExpr: "color",
+        // firstDayOfWeek: 1,
+        showAllDayPanel: false,
+        height: 710,
+        groups: ['ghm_room_id'],
+        resources: [
+            {
+                fieldExpr: 'ghm_room_id',
+                allowMultiple: false,
+                dataSource: dataSource,
+                label: 'Room Name',
+                useColorAsDefault: false
+            },
+        ],
+        editing: {
+            allowAdding: true,
+            allowUpdating: true,
+            allowDeleting: true,
+        },
+        // console.log(schedulerInstance.option("dataSource"))
