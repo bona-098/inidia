@@ -1,38 +1,50 @@
-$booking = $requests->map(function ($request) use ($rooms, $locations) {
-            $room = $rooms->firstWhere('id', $request->ghm_room_id);
-            $location = $room ? $locations->firstWhere('id', $room->location_id) : null;
+dataCellTemplate: function(cellData, index, container) {
+            const { ghm_room_id } = cellData.groups;
+            const currentTraining = getCurrentTraining(cellData.startDate.getDate(), ghm_room_id);
 
-            return [
-                'id' => $request->id,
-                'text' => $request->text ?? '',
-                'guest' => $request->guest ?? 0,
-                'family' => $request->family ?? 0,
-                'employee_id' => $request->employee_id ?? null,
-                'ticketstatus' => $request->ticketStatus ?? null,
-                'completeddate' => $request->completeddate ?? null,
-                'confirmationStatus' => $request->confirmationStatus ?? null,
-                'description' => $request->description ?? '',
-                'requestStatus' => $request->requestStatus ?? 0,
-                'startDate' => optional($request->startDate)->toIso8601String(),
-                'endDate' => optional($request->endDate)->toIso8601String(),
-                'code' => optional($request->code)->code ?? null,
-                'creator' => optional($request->user)->fullname ?? null,
-                'ghm_room_id' => $request->ghm_room_id,
-                'roomName' => $room->roomName ?? null,
-                'location' => $location->Location ?? null,
-                'isMine' => $request->isMine ?? 0,
-                'isPendingOnMe' => $request->isPendingOnMe ?? 0,
-            ];
-        });
+            const wrapper = $('<div>')
+                .toggleClass(`employee-weekend-${ghm_room_id}`, isWeekEnd(cellData.startDate))
+                .appendTo(container)
+                .addClass(`employee-${ghm_room_id}`)
+                .addClass('dx-template-wrapper');
 
-        // Mapping room data with locations
-        $roomsWithLocations = $rooms->map(function ($room) use ($locations) {
-            $location = $locations->firstWhere('id', $room->location_id);
-            return [
-                'text' => $room->roomName,
-                'id' => $room->id,
-                'roomAccupancy' => $room->roomAccupancy ?? 0,
-                'location' => $location ? $location->Location : null,
-                'color' => '#' . substr(md5($room->roomName), 0, 6),
-            ];
-        });
+            wrapper.append($('<div>')
+                .text(cellData.text)
+                .text(cellData.roomAccupancy)
+                .addClass(currentTraining)
+                .addClass('day-cell'));
+        },
+        resourceCellTemplate: function(cellData) {
+            const name = $('<div>')
+                .addClass('name')                    
+                .append($('<h2>').text(cellData.text));
+        
+            const roomAccupancy = $('<div>')
+                .addClass('roomAccupancy')
+                .html(`Bed: ${cellData.data.roomAccupancy}`);
+        
+            // Tentukan warna berdasarkan jumlah bed
+            let bgColor;
+            if (cellData.data.roomAccupancy == 4) {
+                bgColor = "#4caf50"; // Hijau untuk kamar dengan banyak bed
+            } else if (cellData.data.roomAccupancy == 3) {
+                bgColor = "#ff9800"; // Oranye untuk kamar dengan kapasitas sedang            
+            } else if (cellData.data.roomAccupancy == 2) {
+                bgColor = "#ff9800"; // Oranye untuk kamar dengan kapasitas sedang
+            } else {
+                bgColor = "#f44336"; // Merah untuk kamar dengan kapasitas sedikit
+            }
+        
+            const combinedColumn = $('<div>')
+                .addClass('combined-column')
+                .append(name, roomAccupancy)
+                .css({
+                    backgroundColor: bgColor,
+                    padding: '10px',
+                    borderRadius: '5px',
+                    color: '#fff',
+                    textAlign: 'center'
+            });
+
+            return combinedColumn;
+        },
