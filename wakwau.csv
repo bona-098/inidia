@@ -1,80 +1,57 @@
-onAppointmentUpdating: function(e) {            
-            const appointmentData = e.newData;
-            const formatDateForDB = (date) => {
-                const d = new Date(date);
-                return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
-            };
-            appointmentData.startDate = formatDateForDB(appointmentData.startDate);
-            appointmentData.endDate = formatDateForDB(appointmentData.endDate);
-            appointmentData.id = e.oldData.id; // Ensure id is included in appointmentData for updating            
-            // appointmentData.employee_id = serializeToJSON(appointmentData.employee_id);
-            // appointmentData.employee_id = Array.isArray(appointmentData.employee_id) ? JSON.stringify(appointmentData.employee_id):appointmentData.employee_id;
-            appointmentData.guest = Array.isArray(appointmentData.guest) ? JSON.stringify(appointmentData.guest):appointmentData.guest;
-            appointmentData.family = Array.isArray(appointmentData.family) ? JSON.stringify(appointmentData.family):appointmentData.family;
-            console.log('Updating appointment with data:', appointmentData); // Debug log
-            var newTicketStatus = e.newData.ticketStatus;
-            var newConfirmationStatus = e.newData.confirmationStatus;
-            if (newTicketStatus === "Completed") {
-                if (!confirm("Are you sure you want to mark this ticket as completed?")) {
-                    e.cancel = true; // Cancel the update operation
-                } else {
-                    e.newData.confirmationStatus = 'Waiting'; // Update the confirmationStatus to 'Waiting'
-                    e.component.columnOption("ticketStatus", "allowEditing", false);}
-            }
-            if (newConfirmationStatus === "Reworked") {
-                if (!confirm("Are you sure you want to mark this confirmation status as reworked?")) {
-                    e.cancel = true; // Cancel the update operation
-                } else {
-                    e.newData.ticketStatus = 'On Queue'; // Update the ticket status to 'On Queue'
-                    e.component.columnOption("confirmationStatus", "allowEditing", false);
-                    e.component.columnOption("confirmationRemarks", "allowEditing", false);
-                }
-            }
-            if (newConfirmationStatus === "Completed") {
-                if (!confirm("Are you sure you want to mark this confirmation status as completed?")) {
-                    e.cancel = true; // Cancel the update operation
-                } else {
-                    e.component.columnOption("confirmationStatus", "allowEditing", false);
-                    e.component.columnOption("confirmationRemarks", "allowEditing", false);
-                }
-            }
-            Swal.fire({
-                title: 'What do you want to do?',
-                text: 'Choose an option for this booking',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Submit Now',
-                cancelButtonText: 'Save as Draft',
-                reverseButtons: true
-            }).then((result) => {
-                console.log("Swal result:", result);
-                let actionText = result.isConfirmed ? 'submitted' : 'saved as draft';
-        
-            sendRequest(apiurl + "/" + modname + "/" + appointmentData.id, "PUT", {
-                text: appointmentData.text,
-                description: appointmentData.description,
-                startDate: appointmentData.startDate,
-                endDate: appointmentData.endDate,
-                ghm_room_id: appointmentData.ghm_room_id,
-                employee_id: appointmentData.employee_id,
-                guest: appointmentData.guest,
-                family: appointmentData.family,
-                id: appointmentData.id // Ensure id is included in the request body
-            }).then(function(response) {
-                if (response.status === 'success') {
-                    e.component._dataSource.reload();
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Success!',
-                        text: `Booking has been ${actionText}.`,
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
-                } else {
-                    Swal.fire({ icon: 'error', title: 'Error', text: response.message });
-                }
-            }).catch(function(error) {
-                Swal.fire({ icon: 'error', title: 'Error', text: error.responseText });
-            });
+$statusColors = [
+            0 => '#6C757D', // Que (Abu)
+            1 => '#FFC107', // Pending (kuning)
+            2 => '#28A745', // Approved (hijau)
+            3 => '#DC3545', // Rejected (merah)
+            4 => '#007BFF', // Completed (biru)
+        ];
+
+        // Mapping booking data
+        $booking = $requests->map(function ($request) use ($rooms, $locations, $statusColors) {
+            $room = $rooms->firstWhere('id', $request->ghm_room_id);
+            $location = $room ? $locations->firstWhere('id', $room->location_id) : null;
+
+            return [
+                'id' => $request->id,
+                'text' => $request->text ?? '',
+                'guest' => $request->guest ?? 0,
+                'family' => $request->family ?? 0,
+                'employee_id' => $request->employee_id ?? null,
+                'ticketstatus' => $request->ticketStatus ?? null,
+                'completeddate' => $request->completeddate ?? null,
+                'confirmationStatus' => $request->confirmationStatus ?? null,
+                'description' => $request->description ?? '',
+                'requestStatus' => $request->requestStatus ?? 0,
+                'startDate' => optional($request->startDate)->toIso8601String(),
+                'endDate' => optional($request->endDate)->toIso8601String(),
+                'code' => optional($request->code)->code ?? null,
+                'creator' => optional($request->user)->fullname ?? null,
+                'ghm_room_id' => $request->ghm_room_id,
+                'roomName' => $room->roomName ?? null,
+                'location' => $location->Location ?? null,
+                'isMine' => $request->isMine ?? 0,
+                'isPendingOnMe' => $request->isPendingOnMe ?? 0,
+                'color' => $statusColors[$request->requestStatus] ?? '#6C757D', // Default abu-abu jika status tidak cocok
+            ];
         });
-        }
+
+        // Mapping room data with locations
+        $roomsWithLocations = $rooms->map(function ($room) use ($locations, $booking, $statusColors) {
+            $location = $locations->firstWhere('id', $room->location_id);
+
+            // Cari semua request yang sesuai dengan room_id, lalu ambil yang terbaru
+            $requests = $booking->where('ghm_room_id', $room->id);
+            $latestRequest = $requests->sortByDesc('startDate')->first(); // Ambil request dengan startDate terbaru
+            
+            $requestStatus = optional($latestRequest)['requestStatus'] ?? 0;
+
+            return [
+                'text' => $room->roomName,
+                'id' => $room->id,
+                'requestStatus' => $requestStatus,
+                'roomAccupancy' => $room->roomAccupancy ?? 0,
+                'location' => $location ? $location->Location : null,
+                'color' => $statusColors[$requestStatus] ?? '#6C757D', // Default abu-abu jika status tidak cocok
+            ];
+        });
+        dd($roomsWithLocations); 
