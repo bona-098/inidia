@@ -44,3 +44,93 @@ onAppointmentFormOpening: function(e) {
                     // doneButton.removeClass("dx-state-disabled");
                 }
             }
+{
+form.option('items', [    
+                    itemType: 'group',
+                    colSpan: 2,
+                    caption: 'Guest Type',
+                    items: [
+                        {                                
+                            title: 'Employee',
+                            label: { text: 'Employee' },
+                            editorType: 'dxTagBox',
+                            dataField: 'employee_id',
+                            editorOptions: {                                                
+                                dataSource: emplo,
+                                displayExpr: function(item) {
+                                    if (!item) return "";
+                                    const department = departments.find(dept => dept.id === item.department_id);
+                                    return `${item.FullName} | ${item.SAPID} | ${department ? department.DepartmentName : "Failed"}`;                                    
+                                },
+                                valueExpr: 'id',
+                                value: Array.isArray (appointmentData.employee_id) ? appointmentData.employee_id : [],
+                                showSelectionControls: true,
+                                applyValueMode: 'useButtons',
+                                searchEnabled: true,
+                                onValueChanged: validateBooking
+                            }                            
+                        },
+                        {                                        
+                            title: 'Guest',
+                            editorType: 'dxTagBox',
+                            dataField: 'guest',
+                            editorOptions: {
+                                dataSource: [],
+                                value: Array.isArray(appointmentData.guest) ? appointmentData.guest : [],
+                                acceptCustomValue: true,
+                                searchEnabled: true,
+                                showSelectionControls: true,
+                                applyValueMode: 'useButtons',
+                                onCustomItemCreating: function(args) {
+                                    let newValue = args.text;
+                                    let guests = form.option('formData').guest || [];
+                                    if (!guests.includes(newValue)) {
+                                        guests.push(newValue);
+                                        args.customItem = newValue;
+                                    } else {
+                                        args.customItem = null;
+                                    }
+                                    // appointmentData.guest = guests;
+                                    // let newFormData = { ...form.option('fromData'), guest: newGuestList } ;
+                                    // form.option('formData', newFormData);
+                                    form.updateData('guest', guests);
+                                    validateBooking();
+                                    // form.repaint();
+                                }
+                            }
+                        },                            
+                        {
+                            title: 'Family',
+                            editorType: 'dxTagBox',
+                            dataField: 'family',
+                            editorOptions: {
+                                dataSource: [],
+                                value: Array.isArray(appointmentData.family) ? appointmentData.family : [],
+                                acceptCustomValue: true,
+                                searchEnabled: true,
+                                showSelectionControls: true,
+                                applyValueMode: 'useButtons',
+                                onCustomItemCreating: function(args) {
+                                    let newValue = args.text;
+                                    let familys = form.option('formData').family || [];
+                                    if (!familys.includes(newValue)) {
+                                        familys.push(newValue);
+                                        args.customItem = newValue;
+                                    } else {
+                                        args.customItem = null;
+                                    }
+                                    // appointmentData.family = familys;
+                                    // let newFormData = { ...form.option('fromData'), guest: newGuestList } ;
+                                    // form.option('formData', newFormData);
+                                    form.updateData('family', familys);
+                                    // form.repaint();
+                                    validateBooking();
+                                }
+                            }
+                        } 
+                    ]
+                }                                       
+            ]);
+
+            // setTimeout(validateBooking,100);
+        },
