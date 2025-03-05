@@ -1,3 +1,16 @@
+VM1195:1 
+ Uncaught SyntaxError: Unexpected token 'w', "wq" is not valid JSON
+    at JSON.parse (<anonymous>)
+    at deserializeFromJSON (ghm_booking.js:13:17)
+    at i.onAppointmentFormOpening (ghm_booking.js:435:41)
+    at Object.execute (dx.all.js:9:47094)
+    at e._executeAction (dx.all.js:9:46215)
+    at e.execute (dx.all.js:9:45833)
+    at i.<anonymous> (dx.all.js:9:54322)
+    at s (dx.all.js:9:55017)
+    at e._onShowing (dx.all.js:9:3144205)
+    at t.onShowing (dx.all.js:9:3143915)
+===================================================================
 onAppointmentFormOpening: function(e) {
             const form = e.form;
             const appointmentData = e.appointmentData;
