@@ -1,0 +1,46 @@
+onAppointmentFormOpening: function(e) {
+            const form = e.form;
+            const appointmentData = e.appointmentData;
+            // const isNewAppointment = !appointmentData.id;
+
+            console.log('Appointment Data:', appointmentData); // Debug log
+
+            if (appointmentData.employee_id && typeof appointmentData.employee_id === 'string') {
+                appointmentData.employee_id = deserializeFromJSON(appointmentData.employee_id);
+            }
+            if (appointmentData.guest && typeof appointmentData.guest === 'string') {
+                // console.log(appointmentData.guest)
+                appointmentData.guest = deserializeFromJSON(appointmentData.guest);
+                // console.log(appointmentData.guest)
+            } else if (!appointmentData.guest) {
+                appointmentData.guest = []; // Inisialisasi dengan string kosong jika nilai `guest` adalah `null` atau `undefined`
+            }
+            if (appointmentData.family && typeof appointmentData.family === 'string') {
+                // console.log(appointmentData.family)
+                appointmentData.family = deserializeFromJSON(appointmentData.family);
+                // console.log(appointmentData.family)
+            } else if (!appointmentData.family) {
+                appointmentData.family = []; // Inisialisasi dengan string kosong jika nilai `family` adalah `null` atau `undefined`
+            }
+
+            function validateBooking() {
+                let guestCount = (form.getEditor("guest")?.option("value") || []).length;
+                let familyCount = (form.getEditor("family")?.option("value") || []).length;
+                let employeeCount = (form.getEditor("employee_id")?.option("value") || []).length;
+
+                let totalGuests = guestCount + familyCount + employeeCount;
+                console.log("total guest",totalGuests);
+                let selectedRoom = form.getEditor("ghm_room_id")?.option("value");
+                // let roomAccupancy = room?.roomAccupancy || 0;
+                let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomAccupancy || 0;
+                console.log("total Kaps",roomCapacity);
+        
+                let doneButton = $(".dx-popup-bottom .dx-button.dx-popup-done");
+        
+                if (totalGuests > roomCapacity) {
+                    // doneButton.addClass("dx-state-disabled");
+                    DevExpress.ui.notify("Jumlah tamu melebihi kapasitas kamar!", "error", 2000);
+                // } else { 
+                    // doneButton.removeClass("dx-state-disabled");
+                }
+            }
