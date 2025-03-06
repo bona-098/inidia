@@ -13,6 +13,95 @@ Swal.fire({
         
             console.log("Request Status:", requestStatus); // Cek apakah status benar
         
+            // Jalankan POST pertama untuk kedua opsi
+            sendRequest(apiurl + "/" + modname, "POST", {
+                requestStatus: requestStatus,
+                text: appointmentData.text,
+                description: appointmentData.description,
+                startDate: appointmentData.startDate,
+                endDate: appointmentData.endDate,
+                ghm_room_id: appointmentData.ghm_room_id,
+                employee_id: appointmentData.employee_id,
+                guest: appointmentData.guest,
+                family: appointmentData.family
+            }).then(() => {
+                if (result.isConfirmed) {
+                    // Hanya jalankan POST kedua jika Submit Now diklik
+                    sendRequest(apiurl + "/submissionrequest/" + reqid + "/" + modelclass, "POST", {
+                        // const reqid = response.data.id;
+                        // console.log(reqid);
+                        requestStatus: 1,
+                        action: actionForm,
+                        approvalAction: parseInt(valapprovalAction) || 1,
+                        approvalType: valApprovalType,
+                    }).then(function(response) {
+                        if (response.status === 'success') {
+                            e.component._dataSource.reload();
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Success!',
+                                text: `Booking has been ${actionText}.`,
+                                timer: 2000,
+                                showConfirmButton: false
+                            });
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Error', text: response.message });
+                        }
+                    }).catch(function(error) {
+                        Swal.fire({ icon: 'error', title: 'Error', text: error.responseText });
+                    });
+                } else {
+                    // Jika hanya Save as Draft, tampilkan pesan sukses langsung
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: `Booking has been ${actionText}.`,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                }
+            }).catch(function(error) {
+                Swal.fire({ icon: 'error', title: 'Error', text: error.responseText });
+            });
+        });   
+
+// jalankan ini kawan
+function btnreqsubmit(reqid, mode) {
+    var btnSubmit = $('#btn-submit');
+    btnSubmit.prop('disabled', true);
+    var actionForm = (mode == 'approval') ? 'approval' : 'submission';
+    
+    var valapprovalAction = $('input[name="approvalaction"]:checked').val() || null;
+
+    if (mode == 'approval' && !valapprovalAction) {
+        alert('Please select approval action.');
+        btnSubmit.prop('disabled', false);
+        return false;
+    }
+
+    var valApprovalType = (valapprovalAction == 3) ? 'Approved' :
+                          (valapprovalAction == 2) ? 'Reworked' :
+                          (valapprovalAction == 4) ? 'Rejected' : '';
+
+    Swal.fire({
+        title: 'Are you sure?',
+        text: "Are you sure you want to send this submission?",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, send it!'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            showLoadingScreen();
+
+            if (typeof apiurl === "undefined" || typeof modelclass === "undefined") {
+                alert("API URL atau modelclass tidak tersedia!");
+                btnSubmit.prop('disabled', false);
+                hideLoadingScreen();
+                return;
+            }
+
             sendRequest(apiurl + "/" + modname, "POST", {
                 requestStatus: requestStatus,
                 text: appointmentData.text,
@@ -30,19 +119,33 @@ Swal.fire({
                 approvalAction: parseInt(valapprovalAction) || 1,
                 approvalType: valApprovalType,
             }).then(function(response) {
-                if (response.status === 'success') {
-                    e.component._dataSource.reload();
+                btnSubmit.prop('disabled', false);
+                hideLoadingScreen();
+                
+                if (response.status === 'error') {
                     Swal.fire({
-                        icon: 'success',
-                        title: 'Success!',
-                        text: `Booking has been ${actionText}.`,
-                        timer: 2000,
-                        showConfirmButton: false
+                        icon: 'error',
+                        title: 'Error',
+                        text: response.message || 'An error occurred.',
                     });
                 } else {
-                    Swal.fire({ icon: 'error', title: 'Error', text: response.message });
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Saved',
+                        text: 'The submission has been submitted.',
+                    });
+                    popup.hide();
                 }
-            }).catch(function(error) {
-                Swal.fire({ icon: 'error', title: 'Error', text: error.responseText });
             });
-        });
+        } else {
+            btnSubmit.prop('disabled', false);
+            Swal.fire({
+                icon: 'error',
+                title: 'Cancelled',
+                text: 'The submission has been cancelled.',
+                confirmButtonColor: '#3085d6'
+            });
+            hideLoadingScreen();
+        }
+    });
+}
