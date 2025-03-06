@@ -1,23 +1,48 @@
-$totalPeopleData = DB::select("
-        SELECT 
-            request_ghm.id,
-            COALESCE(SUM(EmployeeCount), 0) AS totalEmployee,
-            COALESCE(SUM(GuestCount), 0) AS totalGuest,
-            COALESCE(SUM(FamilyCount), 0) AS totalFamily,
-            COALESCE(SUM(EmployeeCount + GuestCount + FamilyCount), 0) AS totalAll
-        FROM 
-            [request_ghm]
-        CROSS APPLY (SELECT COUNT(*) AS EmployeeCount FROM OPENJSON(employee_id)) AS EmpData
-        CROSS APPLY (SELECT COUNT(*) AS GuestCount FROM OPENJSON(guest)) AS GuestData
-        CROSS APPLY (SELECT COUNT(*) AS FamilyCount FROM OPENJSON(family)) AS FamilyData
-        GROUP BY id
-        ");
+Swal.fire({
+            title: 'What do you want to do?',
+            text: 'Choose an option for this booking',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Submit Now',
+            cancelButtonText: 'Save as Draft',
+            reverseButtons: true
+        }).then((result) => {
+            console.log("Swal result:", result); // Log the result object
+            let requestStatus = result.isConfirmed ? 1 : 0; // Correct assignment
+            let actionText = result.isConfirmed ? 'submitted' : 'saved as draft';
         
-        // Konversi hasil query ke associative array dengan ID sebagai key
-        $totalPeopleArray = collect($totalPeopleData)->mapWithKeys(function ($item) {
-            return [$item->id => $item->totalAll];
-        });
-        // Konversi hasil query ke associative array dengan ID sebagai key
-        $totalPeopleArray = collect($totalPeopleData)->mapWithKeys(function ($item) {
-            return [$item->id => $item->totalAll];
+            console.log("Request Status:", requestStatus); // Cek apakah status benar
+        
+            sendRequest(apiurl + "/" + modname, "POST", {
+                requestStatus: requestStatus,
+                text: appointmentData.text,
+                description: appointmentData.description,
+                startDate: appointmentData.startDate,
+                endDate: appointmentData.endDate,
+                ghm_room_id: appointmentData.ghm_room_id,
+                employee_id: appointmentData.employee_id,
+                guest: appointmentData.guest,
+                family: appointmentData.family
+            })
+            sendRequest(apiurl + "/submissionrequest/" + reqid + "/" + modelclass, "POST", {
+                requestStatus: 1,
+                action: actionForm,
+                approvalAction: parseInt(valapprovalAction) || 1,
+                approvalType: valApprovalType,
+            }).then(function(response) {
+                if (response.status === 'success') {
+                    e.component._dataSource.reload();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: `Booking has been ${actionText}.`,
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: response.message });
+                }
+            }).catch(function(error) {
+                Swal.fire({ icon: 'error', title: 'Error', text: error.responseText });
+            });
         });
