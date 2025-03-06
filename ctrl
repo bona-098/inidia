@@ -1,4 +1,198 @@
-Swal.fire({
+onAppointmentFormOpening: function(e) {
+            const form = e.form;
+            const appointmentData = e.appointmentData;
+            console.log('Appointment Data:', appointmentData);
+            function validateBooking() {
+                let guestCount = (form.getEditor("guest")?.option("value") || []).length;
+                let familyCount = (form.getEditor("family")?.option("value") || []).length;
+                let employeeCount = (form.getEditor("employee_id")?.option("value") || []).length;
+                let totalGuests = guestCount + familyCount + employeeCount;
+                console.log("total guest",totalGuests);
+                let selectedRoom = form.getEditor("ghm_room_id")?.option("value");
+                let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomAccupancy || 0;
+                console.log("total Kaps",roomCapacity);        
+                let doneButton = $(".dx-popup-bottom .dx-button.dx-popup-done");
+                if (totalGuests > roomCapacity) {
+                    DevExpress.ui.notify("Jumlah tamu melebihi kapasitas kamar!", "error", 2000);
+                }
+            }            
+            form.option('items', [                
+                {
+                    itemType: 'group',
+                    colCount: 1,
+                    caption: 'Interests',
+                    items: [
+                        {
+                            label: { text: 'Code' },
+                            dataField: 'code',
+                            editorOptions: {
+                                readOnly: true,
+                                value: appointmentData.code || ''
+                            }
+                        },
+                        {
+                            label: { text: 'Purpose' },
+                            editorType: 'dxTextBox',
+                            dataField: 'text',
+                            editorOptions: {
+                                value: appointmentData.text || ''
+                            }
+                        },
+                        {
+                            label: { text: 'Details' },
+                            editorType: 'dxTextArea',
+                            dataField: 'description',
+                            editorOptions: {
+                                value: appointmentData.description || ''
+                            }
+                        }                           
+                    ]
+                },
+                {
+                    itemType: 'group',
+                    caption: 'Room & Date',
+                    items: [
+                        {
+                            label: { text: 'Room' },
+                            editorType: 'dxSelectBox',
+                            dataField: 'ghm_room_id',
+                            editorOptions: {
+                                dataSource: roomsWithLocations,
+                                displayExpr: 'text',
+                                valueExpr: 'id',
+                                value: appointmentData.ghm_room_id || null,
+                                onValueChanged: validateBooking
+                            }
+                        },
+                        {
+                            label: { text: 'Start Date' },
+                            editorType: 'dxDateBox',
+                            dataField: 'startDate',
+                            editorOptions: {
+                                type: 'datetime',
+                                value: appointmentData.startDate,
+                                displayFormat: 'yyyy-MM-dd HH:mm:ss',
+                                dateSerializationFormat: 'yyyy-MM-ddTHH:mm:ssZ'
+                            }
+                        },
+                        {
+                            label: { text: 'End Date' },
+                            editorType: 'dxDateBox',
+                            dataField: 'endDate',
+                            editorOptions: {
+                                type: 'datetime',
+                                value: appointmentData.endDate,
+                                displayFormat: 'yyyy-MM-dd HH:mm:ss',
+                                dateSerializationFormat: 'yyyy-MM-ddTHH:mm:ssZ'
+                            }
+                        },
+                                                
+                    ]
+                },
+                {
+                    itemType: 'group',
+                    colSpan: 2,
+                    caption: 'Guest Type',
+                    items: [
+                        {                                
+                            title: 'Employee',
+                            label: { text: 'Employee' },
+                            editorType: 'dxTagBox',
+                            dataField: 'employee_id',
+                            editorOptions: {                                                
+                                dataSource: emplo,
+                                displayExpr: function(item) {
+                                    if (!item) return "";
+                                    const department = departments.find(dept => dept.id === item.department_id);
+                                    return `${item.FullName} | ${item.SAPID} | ${department ? department.DepartmentName : "Failed"}`;                                    
+                                },
+                                valueExpr: 'id',
+                                value: Array.isArray (appointmentData.employee_id) ? appointmentData.employee_id : [],
+                                showSelectionControls: true,
+                                applyValueMode: 'useButtons',
+                                searchEnabled: true,
+                                onValueChanged: validateBooking
+                            }                            
+                        },
+                        {                                        
+                            title: 'Guest',
+                            editorType: 'dxTagBox',
+                            dataField: 'guest',
+                            editorOptions: {
+                                dataSource: [],
+                                value: Array.isArray(appointmentData.guest) ? appointmentData.guest : [],
+                                acceptCustomValue: true,
+                                searchEnabled: true,
+                                showSelectionControls: true,
+                                applyValueMode: 'useButtons',
+                                onCustomItemCreating: function(args) {
+                                    let newValue = args.text;
+                                    let guests = form.option('formData').guest || [];
+                                    if (!guests.includes(newValue)) {
+                                        guests.push(newValue);
+                                        args.customItem = newValue;
+                                    } else {
+                                        args.customItem = null;
+                                    }
+                                    form.updateData('guest', guests);
+                                    validateBooking();
+                                }
+                            }
+                        },                            
+                        {
+                            title: 'Family',
+                            editorType: 'dxTagBox',
+                            dataField: 'family',
+                            editorOptions: {
+                                dataSource: [],
+                                value: Array.isArray(appointmentData.family) ? appointmentData.family : [],
+                                acceptCustomValue: true,
+                                searchEnabled: true,
+                                showSelectionControls: true,
+                                applyValueMode: 'useButtons',
+                                onCustomItemCreating: function(args) {
+                                    let newValue = args.text;
+                                    let familys = form.option('formData').family || [];
+                                    if (!familys.includes(newValue)) {
+                                        familys.push(newValue);
+                                        args.customItem = newValue;
+                                    } else {
+                                        args.customItem = null;
+                                    }
+                                    form.updateData('family', familys);
+                                    validateBooking();
+                                }
+                            }
+                        } 
+                    ]
+                }                                       
+            ]);
+            setTimeout(validateBooking,100);
+        },
+        onAppointmentAdding: function(e) {
+        const appointmentData = e.appointmentData;
+        let scheduler = e.component;
+        let guestCount = safeArray(appointmentData.guest).length;
+        let familyCount = safeArray(appointmentData.family).length;
+        let employeeCount = safeArray(appointmentData.employee_id).length;
+        let totalNewGuests = guestCount + familyCount + employeeCount;
+        let selectedRoom = appointmentData.ghm_room_id;
+        let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomAccupancy || 0;
+        let dailyGuestCount = getTotalGuestsPerDay(scheduler, selectedRoom, appointmentData.startDate, appointmentData.endDate);
+        let bookingStart = new Date(appointmentData.startDate);
+        let bookingEnd = new Date(appointmentData.endDate);
+        for (let d = new Date(bookingStart); d <= bookingEnd; d.setDate(d.getDate() + 1)) {
+            let dateKey = d.toISOString().split("T")[0]; // Format YYYY-MM-DD
+            let totalGuestsAfterAdding = (dailyGuestCount[dateKey] || 0) + totalNewGuests;
+
+            if (totalGuestsAfterAdding > roomCapacity) {
+                e.cancel = true; // Batalkan booking
+                DevExpress.ui.notify(`Kapasitas penuh pada ${dateKey}! (${dailyGuestCount[dateKey] || 0}/${roomCapacity})`, "error", 3000);
+                return;
+            }
+        }
+        // Kirim data booking ke server-tambahkan metode btn-req-cancel gunakan dari modul lain
+        Swal.fire({
             title: 'What do you want to do?',
             text: 'Choose an option for this booking',
             icon: 'question',
@@ -8,13 +202,10 @@ Swal.fire({
             reverseButtons: true
         }).then((result) => {
             console.log("Swal result:", result); // Log the result object
-            let requestStatus = result.isConfirmed ? 1 : 0; // Correct assignment
-            let actionText = result.isConfirmed ? 'submitted' : 'saved as draft';
-        
-            console.log("Request Status:", requestStatus); // Cek apakah status benar
-        
-            // Jalankan POST pertama untuk kedua opsi
-            sendRequest(apiurl + "/" + modname, "POST", {
+            let requestStatus = result.isConfirmed ? 1 : 0; // Menentukan status request
+            let actionText = result.isConfirmed ? 'submitted' : 'saved as draft';        
+            console.log("Request Status:", requestStatus);        
+            return sendRequest(apiurl + "/" + modname, "POST", {
                 requestStatus: requestStatus,
                 text: appointmentData.text,
                 description: appointmentData.description,
@@ -24,128 +215,38 @@ Swal.fire({
                 employee_id: appointmentData.employee_id,
                 guest: appointmentData.guest,
                 family: appointmentData.family
-            }).then(() => {
+            }).then((response) => {
+                console.log("Response from first request:", response);
+                // Ambil reqid dari response pertama
+                let reqid = response.data.id;
+                // Jika pengguna memilih "Submit Now", jalankan POST kedua
                 if (result.isConfirmed) {
-                    // Hanya jalankan POST kedua jika Submit Now diklik
-                    sendRequest(apiurl + "/submissionrequest/" + reqid + "/" + modelclass, "POST", {
-                        // const reqid = response.data.id;
-                        // console.log(reqid);
+                    return sendRequest(apiurl + "/submissionrequest/" + reqid + "/" + modelclass, "POST", {
                         requestStatus: 1,
                         action: actionForm,
-                        approvalAction: parseInt(valapprovalAction) || 1,
+                        approvalAction: isNaN(parseInt(valapprovalAction)) ? 1 : parseInt(valapprovalAction),
                         approvalType: valApprovalType,
-                    }).then(function(response) {
-                        if (response.status === 'success') {
-                            e.component._dataSource.reload();
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Success!',
-                                text: `Booking has been ${actionText}.`,
-                                timer: 2000,
-                                showConfirmButton: false
-                            });
-                        } else {
-                            Swal.fire({ icon: 'error', title: 'Error', text: response.message });
-                        }
-                    }).catch(function(error) {
-                        Swal.fire({ icon: 'error', title: 'Error', text: error.responseText });
                     });
                 } else {
-                    // Jika hanya Save as Draft, tampilkan pesan sukses langsung
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Success!',
-                        text: `Booking has been ${actionText}.`,
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
+                    return null; // Tidak ada request kedua jika memilih "Save as Draft"
                 }
-            }).catch(function(error) {
-                Swal.fire({ icon: 'error', title: 'Error', text: error.responseText });
+            }).then((response) => {
+                // Jika POST kedua dilakukan dan sukses
+                if (response && response.status === 'success') {
+                    e.component._dataSource.reload();
+                }        
+                // Tampilkan pesan sukses setelah semua proses selesai
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success!',
+                    text: `Booking has been ${actionText}.`,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            }).catch((error) => {
+                // Tangani error untuk POST pertama atau kedua
+                console.error("Error occurred:", error);
+                Swal.fire({ icon: 'error', title: 'Error', text: error.responseText || 'An error occurred' });
             });
-        });   
-
-// jalankan ini kawan
-function btnreqsubmit(reqid, mode) {
-    var btnSubmit = $('#btn-submit');
-    btnSubmit.prop('disabled', true);
-    var actionForm = (mode == 'approval') ? 'approval' : 'submission';
-    
-    var valapprovalAction = $('input[name="approvalaction"]:checked').val() || null;
-
-    if (mode == 'approval' && !valapprovalAction) {
-        alert('Please select approval action.');
-        btnSubmit.prop('disabled', false);
-        return false;
-    }
-
-    var valApprovalType = (valapprovalAction == 3) ? 'Approved' :
-                          (valapprovalAction == 2) ? 'Reworked' :
-                          (valapprovalAction == 4) ? 'Rejected' : '';
-
-    Swal.fire({
-        title: 'Are you sure?',
-        text: "Are you sure you want to send this submission?",
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Yes, send it!'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            showLoadingScreen();
-
-            if (typeof apiurl === "undefined" || typeof modelclass === "undefined") {
-                alert("API URL atau modelclass tidak tersedia!");
-                btnSubmit.prop('disabled', false);
-                hideLoadingScreen();
-                return;
-            }
-
-            sendRequest(apiurl + "/" + modname, "POST", {
-                requestStatus: requestStatus,
-                text: appointmentData.text,
-                description: appointmentData.description,
-                startDate: appointmentData.startDate,
-                endDate: appointmentData.endDate,
-                ghm_room_id: appointmentData.ghm_room_id,
-                employee_id: appointmentData.employee_id,
-                guest: appointmentData.guest,
-                family: appointmentData.family
-            })
-            sendRequest(apiurl + "/submissionrequest/" + reqid + "/" + modelclass, "POST", {
-                requestStatus: 1,
-                action: actionForm,
-                approvalAction: parseInt(valapprovalAction) || 1,
-                approvalType: valApprovalType,
-            }).then(function(response) {
-                btnSubmit.prop('disabled', false);
-                hideLoadingScreen();
-                
-                if (response.status === 'error') {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: response.message || 'An error occurred.',
-                    });
-                } else {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Saved',
-                        text: 'The submission has been submitted.',
-                    });
-                    popup.hide();
-                }
-            });
-        } else {
-            btnSubmit.prop('disabled', false);
-            Swal.fire({
-                icon: 'error',
-                title: 'Cancelled',
-                text: 'The submission has been cancelled.',
-                confirmButtonColor: '#3085d6'
-            });
-            hideLoadingScreen();
-        }
-    });
-}
+        });      
+    },
