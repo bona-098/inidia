@@ -1,66 +1,86 @@
-function btnreqsubmit(reqid,mode) {
+onAppointmentAdding: function(e) {
+        const appointmentData = e.appointmentData;
+        let scheduler = e.component;
+        let guestCount = safeArray(appointmentData.guest).length;
+        let familyCount = safeArray(appointmentData.family).length;
+        let employeeCount = safeArray(appointmentData.employee_id).length;
+        let totalNewGuests = guestCount + familyCount + employeeCount;
+        let selectedRoom = appointmentData.ghm_room_id;
+        let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomAccupancy || 0;
+        let dailyGuestCount = getTotalGuestsPerDay(scheduler, selectedRoom, appointmentData.startDate, appointmentData.endDate);
+        let bookingStart = new Date(appointmentData.startDate);
+        let bookingEnd = new Date(appointmentData.endDate);
+        for (let d = new Date(bookingStart); d <= bookingEnd; d.setDate(d.getDate() + 1)) {
+            let dateKey = d.toISOString().split("T")[0]; // Format YYYY-MM-DD
+            let totalGuestsAfterAdding = (dailyGuestCount[dateKey] || 0) + totalNewGuests;
 
-    var btnSubmit = $('#btn-submit');
-    btnSubmit.prop('disabled', true);
-    var actionForm = (mode == 'approval') ? 'approval' : 'submission';
-
-    if(mode == 'approval') {
-        var valapprovalAction = $('input[name="approvalaction"]:checked').val(); // mengambil nilai dari radio button
-        var valremarks = $('#remarks').val(); // mengambil nilai dari text area
-        if (!valapprovalAction) {
-            alert('Please select approval action.')
-            btnSubmit.prop('disabled', false);
-            return false;
+            if (totalGuestsAfterAdding > roomCapacity) {
+                e.cancel = true; // Batalkan booking
+                DevExpress.ui.notify(`Kapasitas penuh pada ${dateKey}! (${dailyGuestCount[dateKey] || 0}/${roomCapacity})`, "error", 3000);
+                return;
+            }
         }
-        else if (!valremarks) {
-            alert('Please enter remarks.')
-            btnSubmit.prop('disabled', false);
-            return false;
-        }
-    }
-
-    var valApprovalType = valapprovalAction == 3 ? 'Approved' : valapprovalAction == 2 ? 'Reworked' : valapprovalAction == 4 ? 'Rejected' : '';
-    Swal.fire({
-        title: 'Are you sure?',
-        text: "Are you sure you want to send this submission?",
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Yes, send it!'
-      }).then((result) => {
-        if (result.isConfirmed) {
-            showLoadingScreen();
-            sendRequest(apiurl + "/submissionrequest/"+reqid+"/"+modelclass, "POST", {
-                requestStatus:1,
-                action: actionForm,
-                approvalAction: (valapprovalAction == null) ? 1 : parseInt(valapprovalAction),
-                approvalType: valApprovalType,
-                remarks: valremarks
-          }).then(function(response){
-                if(response.status == 'error') {
-                    btnSubmit.prop('disabled', false);
-                    hideLoadingScreen();
-                } else {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Saved',
-                        text: 'The submission has been submited.',
+        var mode = (reqstatus == 0 || reqstatus == 2 && (isMine == 1)) ? 'edit' : (reqstatus == 1 && ((isMine == 0 && isPendingOnMe == 1) || (isMine == 1 && isPendingOnMe == 1)) ? 'approval' : 'view') ;
+        
+        var actionForm = (mode == 'approval') ? 'approval' : 'submission';
+    
+        var valapprovalAction = $('input[name="approvalaction"]:checked').val() || null;
+        // Kirim data booking ke server-tambahkan metode btn-req-cancel gunakan dari modul lain
+        Swal.fire({
+            title: 'What do you want to do?',
+            text: 'Choose an option for this booking',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Submit Now',
+            cancelButtonText: 'Save as Draft',
+            reverseButtons: true
+        }).then((result) => {
+            console.log("Swal result:", result);
+            let requestStatus = result.isConfirmed ? 1 : 0;
+            
+            return sendRequest(apiurl + "/" + modname, "POST", {
+                requestStatus: requestStatus,
+                text: appointmentData.text,
+                description: appointmentData.description,
+                startDate: appointmentData.startDate,
+                endDate: appointmentData.endDate,
+                ghm_room_id: appointmentData.ghm_room_id,
+                employee_id: appointmentData.employee_id,
+                guest: appointmentData.guest,
+                family: appointmentData.family
+            }).then((response) => {
+                console.log("Response from first request:", response);
+                let reqid = response.data.id;
+                console.log("Received reqid:", reqid);
+        
+                if (result.isConfirmed) {
+                    console.log("Sending second request with reqid:", reqid);
+                    return sendRequest(apiurl + "/submissionrequest/" + reqid + "/" + modelclass, "POST", {
+                        requestStatus: 1,
+                        action: actionForm,
+                        approvalAction: isNaN(parseInt(valapprovalAction)) ? 1 : parseInt(valapprovalAction),
+                        approvalType: valApprovalType,
                     });
-                    popup.hide();
-                    hideLoadingScreen();
+                } else {
+                    return null;
                 }
-          });
-        } else {
-            btnSubmit.prop('disabled', false);
-            Swal.fire({
-                icon: 'error',
-                title: 'Cancelled',
-                text: 'The submission has been cancelled.',
-                confirmButtonColor: '#3085d6'
+            }).then((response) => {
+                if (response) {
+                    console.log("Response from second request:", response);
+                    if (response.status === 'success') {
+                        e.component._dataSource.reload();
+                    }
+                }
+        
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success!',
+                    text: `Booking has been ${result.isConfirmed ? "submitted" : "saved as draft"}.`,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            }).catch((error) => {
+                console.error("Error occurred:", error);
+                Swal.fire({ icon: 'error', title: 'Error', text: error.responseText || 'An error occurred' });
             });
-            hideLoadingScreen();
-        }
-      });
-
-}
+        });   
