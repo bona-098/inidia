@@ -1,109 +1,54 @@
-Booking Data: (33) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
-jquery-3.5.1.min.js:2 [Violation] 'setTimeout' handler took 169ms
-ghm_booking.js:903 🔄 Fetching new data from: http://localhost/devportal/api/ghmrequest
-ghm_booking.js:907 ✅ Data Fetched: (33) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
-jquery-3.5.1.min.js:2  jQuery.Deferred exception: schedulerInstance is not defined ReferenceError: schedulerInstance is not defined
-    at http://localhost/devportal/public/assets/js/submission/ghm_booking.js:915:13
-    at e (http://localhost/devportal/public/assets/js/jquery-3.5.1.min.js:2:36511)
-    at http://localhost/devportal/public/assets/js/jquery-3.5.1.min.js:2:36887 undefined
-S.Deferred.exceptionHook @ jquery-3.5.1.min.js:2
-(anonymous) @ jquery-3.5.1.min.js:2
-setTimeout
-(anonymous) @ jquery-3.5.1.min.js:2
-c @ jquery-3.5.1.min.js:2
-fireWith @ jquery-3.5.1.min.js:2
-fire @ jquery-3.5.1.min.js:2
-c @ jquery-3.5.1.min.js:2
-fireWith @ jquery-3.5.1.min.js:2
-(anonymous) @ jquery-3.5.1.min.js:2
-(anonymous) @ ghm_booking:2339
-c @ jquery-3.5.1.min.js:2
-fireWith @ jquery-3.5.1.min.js:2
-l @ jquery-3.5.1.min.js:2
-(anonymous) @ jquery-3.5.1.min.js:2
-load
-send @ jquery-3.5.1.min.js:2
-ajax @ jquery-3.5.1.min.js:2
-sendRequest @ ghm_booking:2324
-repaintScheduler @ ghm_booking.js:905
-(anonymous) @ ghm_booking.js:391
-e @ jquery-3.5.1.min.js:2
-(anonymous) @ jquery-3.5.1.min.js:2
-setTimeout
-(anonymous) @ jquery-3.5.1.min.js:2
-c @ jquery-3.5.1.min.js:2
-fireWith @ jquery-3.5.1.min.js:2
-fire @ jquery-3.5.1.min.js:2
-c @ jquery-3.5.1.min.js:2
-fireWith @ jquery-3.5.1.min.js:2
-(anonymous) @ jquery-3.5.1.min.js:2
-(anonymous) @ ghm_booking:2339
-c @ jquery-3.5.1.min.js:2
-fireWith @ jquery-3.5.1.min.js:2
-l @ jquery-3.5.1.min.js:2
-(anonymous) @ jquery-3.5.1.min.js:2
-load
-send @ jquery-3.5.1.min.js:2
-ajax @ jquery-3.5.1.min.js:2
-sendRequest @ ghm_booking:2324
-(anonymous) @ ghm_booking.js:378
-Promise.then
-then @ sweetalert2.min.js:1
-(anonymous) @ ghm_booking.js:372
-ghm_booking.js:919  ❌ Gagal mengambil data terbaru: ReferenceError: schedulerInstance is not defined
-    at ghm_booking.js:915:13
-    at e (jquery-3.5.1.min.js:2:36511)
-    at jquery-3.5.1.min.js:2:36887
-(anonymous) @ ghm_booking.js:919
-e @ jquery-3.5.1.min.js:2
-(anonymous) @ jquery-3.5.1.min.js:2
-setTimeout
-(anonymous) @ jquery-3.5.1.min.js:2
-c @ jquery-3.5.1.min.js:2
-fireWith @ jquery-3.5.1.min.js:2
-fire @ jquery-3.5.1.min.js:2
-c @ jquery-3.5.1.min.js:2
-fireWith @ jquery-3.5.1.min.js:2
-(anonymous) @ jquery-3.5.1.min.js:2
-setTimeout
-(anonymous) @ jquery-3.5.1.min.js:2
-c @ jquery-3.5.1.min.js:2
-fireWith @ jquery-3.5.1.min.js:2
-fire @ jquery-3.5.1.min.js:2
-c @ jquery-3.5.1.min.js:2
-fireWith @ jquery-3.5.1.min.js:2
-(anonymous) @ jquery-3.5.1.min.js:2
-(anonymous) @ ghm_booking:2339
-c @ jquery-3.5.1.min.js:2
-fireWith @ jquery-3.5.1.min.js:2
-l @ jquery-3.5.1.min.js:2
-(anonymous) @ jquery-3.5.1.min.js:2
-load
-send @ jquery-3.5.1.min.js:2
-ajax @ jquery-3.5.1.min.js:2
-sendRequest @ ghm_booking:2324
-repaintScheduler @ ghm_booking.js:905
-(anonymous) @ ghm_booking.js:391
-e @ jquery-3.5.1.min.js:2
-(anonymous) @ jquery-3.5.1.min.js:2
-setTimeout
-(anonymous) @ jquery-3.5.1.min.js:2
-c @ jquery-3.5.1.min.js:2
-fireWith @ jquery-3.5.1.min.js:2
-fire @ jquery-3.5.1.min.js:2
-c @ jquery-3.5.1.min.js:2
-fireWith @ jquery-3.5.1.min.js:2
-(anonymous) @ jquery-3.5.1.min.js:2
-(anonymous) @ ghm_booking:2339
-c @ jquery-3.5.1.min.js:2
-fireWith @ jquery-3.5.1.min.js:2
-l @ jquery-3.5.1.min.js:2
-(anonymous) @ jquery-3.5.1.min.js:2
-load
-send @ jquery-3.5.1.min.js:2
-ajax @ jquery-3.5.1.min.js:2
-sendRequest @ ghm_booking:2324
-(anonymous) @ ghm_booking.js:378
-Promise.then
-then @ sweetalert2.min.js:1
-(anonymous) @ ghm_booking.js:372
+setTimeout(() => {
+                const actionButton = document.getElementById(actionButtonId);
+                if (actionButton) {
+                    actionButton.addEventListener("click", function (event) {
+                        event.stopPropagation();
+                        event.preventDefault();
+
+                        Swal.fire({
+                            title: isCancelable ? 'Cancel Booking?' : 'Are you sure?',
+                            text: isCancelable
+                                ? "Do you really want to cancel this booking?"
+                                : "Do you really want to delete this booking?",
+                            icon: isCancelable ? 'warning' : 'error',
+                            showCancelButton: true,
+                            confirmButtonText: isCancelable ? 'Yes, cancel it!' : 'Yes, delete it!',
+                            cancelButtonText: 'No, keep it'
+                        }).then((result) => {
+                            if (!result.isConfirmed) return;
+
+                            let requestType = isCancelable ? "PATCH" : "DELETE";
+                            let requestData = isCancelable ? { requestStatus: 0 } : {};
+
+                            sendRequest(apiurl + "/" + modname + "/" + booking.id, requestType, requestData)
+                                .then(response => {
+                                    if (response.status === "success") {
+                                        Swal.fire({
+                                            icon: 'success',
+                                            title: isCancelable ? 'Booking Canceled!' : 'Deleted!',
+                                            text: isCancelable ? 
+                                                'Booking has been successfully set to Canceled.' : 
+                                                'Booking deleted successfully!',
+                                            timer: 2000,
+                                            showConfirmButton: false
+                                        });
+                                        repaintScheduler(); // 🔥 Update data scheduler
+                                    } else {
+                                        Swal.fire({
+                                            icon: 'error',
+                                            title: 'Error',
+                                            text: response.message || "Failed to update booking."
+                                        });
+                                    }
+                                })
+                                .catch(error => {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Error',
+                                        text: error.responseText || "Unknown error."
+                                    });
+                                });
+                        });
+                    });
+                }
+            }, 200);
