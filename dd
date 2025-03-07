@@ -1,17 +1,67 @@
 {
+                    itemType: 'group',
+                    caption: 'Room & Date',
+                    items: [
+                        {
+                            label: { text: 'Room' },
+                            editorType: 'dxSelectBox',
+                            dataField: 'ghm_room_id',
+                            helpText: 'Occupancy : ? | Booked : ? | Remaining : ?',
+                            editorOptions: {
+                                readOnly: true,
+                                dataSource: roomsWithLocations,
+                                displayExpr: function(item) {
+                                    if (!item) return "";                                    
+                                    return `${item.location} | ${item.text}`;                                    
+                                },
+                                valueExpr: 'id',
+                                value: appointmentData.ghm_room_id || null,
+                                onValueChanged: validateBooking()
+                            }
+                        },
+                        {
+                            label: { text: 'Start Date' },
+                            editorType: 'dxDateBox',
+                            dataField: 'startDate',
+                            editorOptions: {
+                                type: 'datetime',
+                                value: appointmentData.startDate,
+                                displayFormat: 'dd-MM-yyyy HH:mm:ss',
+                                dateSerializationFormat: 'yyyy-MM-ddTHH:mm:ssZ'
+                            },
+                            validationRules: [{ type: "required", message: 'startDate is required' }],
+                        },
+                        {
                             label: { text: 'End Date' },
+                            editorType: 'dxDateBox',
+                            dataField: 'endDate',
+                            editorOptions: {
+                                type: 'datetime',
+                                value: appointmentData.endDate,
+                                displayFormat: 'dd-MM-yyyy HH:mm:ss',
+                                dateSerializationFormat: 'yyyy-MM-ddTHH:mm:ssZ'
+                            },
+                            validationRules: [{ type: "required", message: 'endDate is required' }],
+                        },
+                        {
+                            label: { text: 'requestStatus' },
                             dataField: 'requestStatus',
                             encodeHtml: false,
                             allowFiltering: false,
                             allowHeaderFiltering: true,
                             customizeText: function (e) {
-                                var arrText = [
-                                    "<span class='btn btn-secondary btn-xs btn-status'>Draft</span>",
-                                    "<span class='btn btn-primary btn-xs btn-status'>Waiting Approval</span>",
-                                    "<span class='btn btn-warning btn-xs btn-status'>Rework</span>",
-                                    "<span class='btn btn-success btn-xs btn-status'>Approved</span>",
-                                    "<span class='btn btn-danger btn-xs btn-status'>Rejected</span>",
-                                ];
-                                return arrText[e.value];
-                            },
-                        },
+                                console.log("Nilai yang diterima:", e.value); // Log nilai untuk debugging
+                                var statusMapping = {
+                                    "0": "Draft",
+                                    "1": "Waiting Approval",
+                                    "2": "Rework",
+                                    "3": "Approved",
+                                    "4": "Rejected"
+                                };
+                            
+                                return statusMapping[String(e.value)] || "Unknown";
+                            }
+                            
+                        }
+                    ]
+                },
