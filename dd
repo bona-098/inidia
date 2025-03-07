@@ -1,67 +1,65 @@
-{
-                    itemType: 'group',
-                    caption: 'Room & Date',
-                    items: [
-                        {
-                            label: { text: 'Room' },
-                            editorType: 'dxSelectBox',
-                            dataField: 'ghm_room_id',
-                            helpText: 'Occupancy : ? | Booked : ? | Remaining : ?',
-                            editorOptions: {
-                                readOnly: true,
-                                dataSource: roomsWithLocations,
-                                displayExpr: function(item) {
-                                    if (!item) return "";                                    
-                                    return `${item.location} | ${item.text}`;                                    
-                                },
-                                valueExpr: 'id',
-                                value: appointmentData.ghm_room_id || null,
-                                onValueChanged: validateBooking()
-                            }
-                        },
-                        {
-                            label: { text: 'Start Date' },
-                            editorType: 'dxDateBox',
-                            dataField: 'startDate',
-                            editorOptions: {
-                                type: 'datetime',
-                                value: appointmentData.startDate,
-                                displayFormat: 'dd-MM-yyyy HH:mm:ss',
-                                dateSerializationFormat: 'yyyy-MM-ddTHH:mm:ssZ'
-                            },
-                            validationRules: [{ type: "required", message: 'startDate is required' }],
-                        },
-                        {
-                            label: { text: 'End Date' },
-                            editorType: 'dxDateBox',
-                            dataField: 'endDate',
-                            editorOptions: {
-                                type: 'datetime',
-                                value: appointmentData.endDate,
-                                displayFormat: 'dd-MM-yyyy HH:mm:ss',
-                                dateSerializationFormat: 'yyyy-MM-ddTHH:mm:ssZ'
-                            },
-                            validationRules: [{ type: "required", message: 'endDate is required' }],
-                        },
-                        {
-                            label: { text: 'requestStatus' },
-                            dataField: 'requestStatus',
-                            encodeHtml: false,
-                            allowFiltering: false,
-                            allowHeaderFiltering: true,
-                            customizeText: function (e) {
-                                console.log("Nilai yang diterima:", e.value); // Log nilai untuk debugging
-                                var statusMapping = {
-                                    "0": "Draft",
-                                    "1": "Waiting Approval",
-                                    "2": "Rework",
-                                    "3": "Approved",
-                                    "4": "Rejected"
-                                };
-                            
-                                return statusMapping[String(e.value)] || "Unknown";
-                            }
-                            
-                        }
-                    ]
-                },
+$(function() {
+    function submitFormData() {
+        if (dataSubmitted) return; // Prevent duplicate submissions
+
+        dataSubmitted = true;
+        const formData = $('#booking-form').serializeArray();
+        const employeeIdsField = formData.find(field => field.name === 'employee');
+        // employeeIdsField.value = serializeToJSON(employeeIdsField.value.split(',').map(Number));
+
+        const guestField = formData.find(field => field.name === 'guest');
+        guestField.value = (guestField.value.split(',').map(name => name.trim()));
+
+        const familyField = formData.find(field => field.name === 'family');
+        familyField.value = serializeToJSON(familyField.value.split(',').map(name => name.trim()));
+
+        sendRequest(apiurl + "/" + modname, "POST", formData).then(function(response) {
+            if (response.status === 'success') {
+                alert('Booking created successfully!');
+                location.reload(); // Reload page to reflect new booking
+            } else {
+                alert('Error: ' + response.message);
+            }
+        }).catch(function(error) {
+            alert('Error: ' + error.responseText);
+        }).finally(function() {
+            dataSubmitted = false; // Reset the flag after submission
+        });
+    }
+
+$('#booking-form').on('submit', function(event) {
+    event.preventDefault();
+    submitFormData();
+});
+
+$('#location-selector').dxSelectBox({
+    dataSource: uniqueLocations,
+    displayExpr: function(item) {
+        return item || "";
+    },
+    valueExpr: function(item) {
+        return item;
+    },
+    value: uniqueLocations[0],
+    onValueChanged: function(e) {
+        const selectedLocation = e.value;
+        updateRoomSelector(selectedLocation);
+    }
+});
+
+function updateRoomSelector(location) {
+    const filteredRooms = roomsWithLocations.filter(emp => emp.location === location);
+    $('#room-selector').dxSelectBox({
+        dataSource: filteredRooms,
+        displayExpr: 'text',
+        valueExpr: 'id',
+        value: null,
+        placeholder: 'Select Room',
+        onValueChanged: function(e) {
+            const selectedRoomId = e.value;
+            updateScheduler(location, selectedRoomId);
+        }
+    });
+
+    updateScheduler(location, null);
+}
