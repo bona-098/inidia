@@ -1,0 +1,18 @@
+{
+                            label: { text: 'Room' },
+                            editorType: 'dxSelectBox',
+                            dataField: 'ghm_room_id',
+                            helpText: 'Occupancy : ? | Booked : ? | Remaining : ?',
+                            editorOptions: {
+                                readOnly: true,
+                                dataSource: roomsWithLocations,
+                                displayExpr: function(item) {
+                                    if (!item) return "";
+                                    const roomsWithLocations = roomsWithLocations.find(location => location.id === item.location_id);
+                                    return `${item.location} | ${roomsWithLocations ? roomsWithLocations.location : "Failed"}`;                                    
+                                },
+                                valueExpr: 'id',
+                                value: appointmentData.ghm_room_id || null,
+                                onValueChanged: validateBooking
+                            }
+                        },
