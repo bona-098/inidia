@@ -1,35 +1,39 @@
-$(function() {
-    function submitFormData() {
-        if (dataSubmitted) return; // Prevent duplicate submissions
+$('#help-selector').dxButton({
+    dataSource: uniqueLocations,
+    displayExpr: function(item) {
+        return item || "";
+    },
+    valueExpr: function(item) {
+        return item;
+    },
+    value: uniqueLocations[0],
+    onValueChanged: function(e) {
+        const selectedLocation = e.value;
+        updateRoomSelector(selectedLocation);
+    },
+    icon: 'plus',
+    onClick() {
+      DevExpress.ui.notify('The button was clicked');
+    },
+  });
 
-        dataSubmitted = true;
-        const formData = $('#booking-form').serializeArray();
-        const employeeIdsField = formData.find(field => field.name === 'employee');
-        // employeeIdsField.value = serializeToJSON(employeeIdsField.value.split(',').map(Number));
-
-        const guestField = formData.find(field => field.name === 'guest');
-        guestField.value = (guestField.value.split(',').map(name => name.trim()));
-
-        const familyField = formData.find(field => field.name === 'family');
-        familyField.value = serializeToJSON(familyField.value.split(',').map(name => name.trim()));
-
-        sendRequest(apiurl + "/" + modname, "POST", formData).then(function(response) {
-            if (response.status === 'success') {
-                alert('Booking created successfully!');
-                location.reload(); // Reload page to reflect new booking
-            } else {
-                alert('Error: ' + response.message);
-            }
-        }).catch(function(error) {
-            alert('Error: ' + error.responseText);
-        }).finally(function() {
-            dataSubmitted = false; // Reset the flag after submission
-        });
-    }
-
-$('#booking-form').on('submit', function(event) {
-    event.preventDefault();
-    submitFormData();
+$('#refresh-selector').dxButton({
+  icon: 'back',
+  dataSource: uniqueLocations,
+    displayExpr: function(item) {
+        return item || "";
+    },
+    valueExpr: function(item) {
+        return item;
+    },
+    value: uniqueLocations[0],
+    onValueChanged: function(e) {
+        const selectedLocation = e.value;
+        updateRoomSelector(selectedLocation);
+    },
+  onClick() {
+    DevExpress.ui.notify('The button was clicked');
+  },
 });
 
 $('#location-selector').dxSelectBox({
@@ -46,20 +50,3 @@ $('#location-selector').dxSelectBox({
         updateRoomSelector(selectedLocation);
     }
 });
-
-function updateRoomSelector(location) {
-    const filteredRooms = roomsWithLocations.filter(emp => emp.location === location);
-    $('#room-selector').dxSelectBox({
-        dataSource: filteredRooms,
-        displayExpr: 'text',
-        valueExpr: 'id',
-        value: null,
-        placeholder: 'Select Room',
-        onValueChanged: function(e) {
-            const selectedRoomId = e.value;
-            updateScheduler(location, selectedRoomId);
-        }
-    });
-
-    updateScheduler(location, null);
-}
