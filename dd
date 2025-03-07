@@ -1,180 +1,115 @@
-onAppointmentFormOpening: function(e) {
-            const form = e.form;
+onAppointmentAdding: function(e) {
+            console.log("onAppointmentAdding triggered", e);
             const appointmentData = e.appointmentData;
-            console.log('Appointment Data:', appointmentData);
-            function validateBooking() {
-                let guestCount = (form.getEditor("guest")?.option("value") || []).length;
-                let familyCount = (form.getEditor("family")?.option("value") || []).length;
-                let employeeCount = (form.getEditor("employee")?.option("value") || []).length;
-                let totalGuests = guestCount + familyCount + employeeCount;
-                console.log("total guest",totalGuests);
-                let selectedRoom = form.getEditor("ghm_room_id")?.option("value");
-                let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomAccupancy || 0;
-                console.log("total Kaps",roomCapacity);        
-                let doneButton = $(".dx-popup-bottom .dx-button.dx-popup-done");
-                if (totalGuests > roomCapacity) {
-                    DevExpress.ui.notify("Jumlah tamu melebihi kapasitas kamar!", "error", 2000);
+            ;
+            let scheduler = e.component;
+            let guestCount = safeArray(appointmentData.guest).length;
+            let familyCount = safeArray(appointmentData.family).length;
+            let employeeCount = safeArray(appointmentData.employee).length;
+            let totalNewGuests = guestCount + familyCount + employeeCount;
+            if (totalNewGuests < 1) {
+                e.cancel = true; // Mencegah submit
+                DevExpress.ui.notify("Total guests harus lebih dari 0!", "error", 2000);
+            }
+            let selectedRoom = appointmentData.ghm_room_id;
+            let roomData = roomsWithLocations.find(room=>room.id === selectedRoom);
+            if (!roomData) {
+                DevExpress.ui.notify("Room not Found", "error", 3000);
+                e.cancel = true;
+                return;
+            }
+            let sector = roomData.sector;
+            let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomAccupancy || 0;
+            let dailyGuestCount = getTotalGuestsPerDay(scheduler, selectedRoom, appointmentData.startDate, appointmentData.endDate);
+            let bookingStart = new Date(appointmentData.startDate);
+            let bookingEnd = new Date(appointmentData.endDate);
+            
+            console.log("Total new guests:", totalNewGuests);
+            console.log("Room capacity:", roomCapacity);
+            console.log("Daily guest count:", dailyGuestCount);
+            
+            for (let d = new Date(bookingStart); d <= bookingEnd; d.setDate(d.getDate() + 1)) {
+                let dateKey = d.toISOString().split("T")[0]; // Format YYYY-MM-DD
+                let totalGuestsAfterAdding = (dailyGuestCount[dateKey] || 0) + totalNewGuests;
+                
+                console.log(`Checking capacity for ${dateKey}: ${totalGuestsAfterAdding}/${roomCapacity}`);
+                
+                if (totalGuestsAfterAdding > roomCapacity) {
+                    e.cancel = true; // Batalkan booking
+                    DevExpress.ui.notify(`Kapasitas penuh pada ${dateKey}! (${dailyGuestCount[dateKey] || 0}/${roomCapacity})`, "error", 3000);
+                    return;
                 }
-            }            
-            form.option('items', [                
-                {
-                    itemType: 'group',
-                    colCount: 1,
-                    caption: 'Interests',
-                    items: [
-                        {
-                            label: { text: 'Code' },
-                            dataField: 'code',
-                            editorOptions: {
-                                readOnly: true,
-                                value: appointmentData.code || ''
-                            }
-                        },
-                        {
-                            label: { text: 'Purpose' },
-                            editorType: 'dxTextBox',
-                            dataField: 'text',
-                            editorOptions: {
-                                value: appointmentData.text || ''
-                            },
-                            validationRules: [{ type: "required", message: 'Purpose is required',}],
-                        },
-                        {
-                            label: { text: 'Details' },
-                            editorType: 'dxTextArea',
-                            dataField: 'description',
-                            editorOptions: {
-                                value: appointmentData.description || ''
-                            },
-                            validationRules: [{ type: "required", message: 'Details is required',}],
-                        }                           
-                    ]
-                },
-                {
-                    itemType: 'group',
-                    caption: 'Room & Date',
-                    items: [
-                        {
-                            label: { text: 'Room' },
-                            editorType: 'dxSelectBox',
-                            dataField: 'ghm_room_id',
-                            helpText: 'Occupancy : ? | Booked : ? | Remaining : ?',
-                            editorOptions: {
-                                readOnly: true,
-                                dataSource: roomsWithLocations,
-                                displayExpr: function(item) {
-                                    if (!item) return "";                                    
-                                    return `${item.location} | ${item.text}`;                                    
-                                },
-                                valueExpr: 'id',
-                                value: appointmentData.ghm_room_id || null,
-                                onValueChanged: validateBooking
-                            }
-                        },
-                        {
-                            label: { text: 'Start Date' },
-                            editorType: 'dxDateBox',
-                            dataField: 'startDate',
-                            editorOptions: {
-                                type: 'datetime',
-                                value: appointmentData.startDate,
-                                displayFormat: 'yyyy-MM-dd HH:mm:ss',
-                                dateSerializationFormat: 'yyyy-MM-ddTHH:mm:ssZ'
-                            },
-                            validationRules: [{ type: "required", message: 'startDate is required',}],
-                        },
-                        {
-                            label: { text: 'End Date' },
-                            editorType: 'dxDateBox',
-                            dataField: 'endDate',
-                            editorOptions: {
-                                type: 'datetime',
-                                value: appointmentData.endDate,
-                                displayFormat: 'yyyy-MM-dd HH:mm:ss',
-                                dateSerializationFormat: 'yyyy-MM-ddTHH:mm:ssZ'
-                            },
-                            validationRules: [{ type: "required", message: 'endDate is required',}],
-                        },
-                                                
-                    ]
-                },
-                {
-                    itemType: 'group',
-                    colSpan: 2,
-                    caption: 'Guest Type',
-                    items: [
-                        {                                
-                            title: 'Employee',
-                            label: { text: 'Employee' },
-                            editorType: 'dxTagBox',
-                            dataField: 'employee',
-                            editorOptions: {                                                
-                                dataSource: emplo,
-                                displayExpr: function(item) {
-                                    if (!item) return "";
-                                    const department = departments.find(dept => dept.id === item.department_id);
-                                    return `${item.FullName} | ${item.SAPID} | ${department ? department.DepartmentName : "Failed"}`;                                    
-                                },
-                                valueExpr: 'id',
-                                value: Array.isArray (appointmentData.employee) ? appointmentData.employee : [],
-                                showSelectionControls: true,
-                                applyValueMode: 'useButtons',
-                                searchEnabled: true,
-                                onValueChanged: validateBooking
-                            }                            
-                        },
-                        {                                        
-                            title: 'Guest',
-                            editorType: 'dxTagBox',
-                            dataField: 'guest',
-                            editorOptions: {
-                                dataSource: [],
-                                value: Array.isArray(appointmentData.guest) ? appointmentData.guest : [],
-                                acceptCustomValue: true,
-                                searchEnabled: true,
-                                showSelectionControls: true,
-                                applyValueMode: 'useButtons',
-                                onCustomItemCreating: function(args) {
-                                    let newValue = args.text;
-                                    let guests = form.option('formData').guest || [];
-                                    if (!guests.includes(newValue)) {
-                                        guests.push(newValue);
-                                        args.customItem = newValue;
-                                    } else {
-                                        args.customItem = null;
+            }
+            
+            console.log("Capacity check passed. Proceeding with submission...");
+            
+            Swal.fire({
+                title: 'What do you want to do?',
+                text: 'Choose an option for this booking',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Submit Now',
+                cancelButtonText: 'Save as Draft',
+                reverseButtons: true
+            }).then((result) => {
+                console.log("Swal result:", result);
+                let requestStatus = 0;
+
+                if(!result.isConfirmed) {
+                    console.log('Draft');
+                    sendRequest(apiurl + "/" + modname, "POST", {
+                        requestStatus: requestStatus,
+                        text: appointmentData.text,
+                        description: appointmentData.description,
+                        startDate: appointmentData.startDate,
+                        endDate: appointmentData.endDate,
+                        ghm_room_id: appointmentData.ghm_room_id,
+                        employee: appointmentData.employee,
+                        guest: appointmentData.guest,
+                        family: appointmentData.family,
+                        sector: sector,
+                    }); 
+                } else {
+                    console.log('Submit');
+                    sendRequest(apiurl + "/" + modname, "POST", {
+                        requestStatus: requestStatus,
+                        text: appointmentData.text,
+                        description: appointmentData.description,
+                        startDate: appointmentData.startDate,
+                        endDate: appointmentData.endDate,
+                        ghm_room_id: appointmentData.ghm_room_id,
+                        employee: appointmentData.employee,
+                        guest: appointmentData.guest,
+                        family: appointmentData.family,
+                        sector: sector,
+                    }).then(function(response){
+
+                        let valapprovalAction = null;
+                        let actionForm = 'submission';
+                        let valApprovalType = '';
+                        let valremarks = '';
+
+                        if(response.status == 'success') {
+                            const reqid = response.data.id;
+                            sendRequest(apiurl + "/submissionrequest/"+reqid+"/"+modelclass, "POST", {
+                                requestStatus:1,
+                                action: actionForm,
+                                approvalAction: (valapprovalAction == null) ? 1 : parseInt(valapprovalAction),
+                                approvalType: valApprovalType,
+                                remarks: valremarks
+                            }).then(function(response){
+                                    if(response.status == 'success') {
+                                        Swal.fire({
+                                            icon: 'success',
+                                            title: 'Saved',
+                                            text: 'The submission has been submited.',
+                                        });
                                     }
-                                    form.updateData('guest', guests);
-                                    validateBooking();
-                                }
-                            }
-                        },                            
-                        {
-                            title: 'Family',
-                            editorType: 'dxTagBox',
-                            dataField: 'family',
-                            editorOptions: {
-                                dataSource: [],
-                                value: Array.isArray(appointmentData.family) ? appointmentData.family : [],
-                                acceptCustomValue: true,
-                                searchEnabled: true,
-                                showSelectionControls: true,
-                                applyValueMode: 'useButtons',
-                                onCustomItemCreating: function(args) {
-                                    let newValue = args.text;
-                                    let familys = form.option('formData').family || [];
-                                    if (!familys.includes(newValue)) {
-                                        familys.push(newValue);
-                                        args.customItem = newValue;
-                                    } else {
-                                        args.customItem = null;
-                                    }
-                                    form.updateData('family', familys);
-                                    validateBooking();
-                                }
-                            }
-                        } 
-                    ]
-                }                                       
-            ]);
-            setTimeout(validateBooking,100);
-        },
+                            });
+                        }
+                    });
+                }
+                
+            });
+               
+    },
