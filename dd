@@ -1,115 +1,81 @@
-onAppointmentAdding: function(e) {
-            console.log("onAppointmentAdding triggered", e);
-            const appointmentData = e.appointmentData;
-            ;
-            let scheduler = e.component;
-            let guestCount = safeArray(appointmentData.guest).length;
-            let familyCount = safeArray(appointmentData.family).length;
-            let employeeCount = safeArray(appointmentData.employee).length;
-            let totalNewGuests = guestCount + familyCount + employeeCount;
-            if (totalNewGuests < 1) {
-                e.cancel = true; // Mencegah submit
-                DevExpress.ui.notify("Total guests harus lebih dari 0!", "error", 2000);
-            }
-            let selectedRoom = appointmentData.ghm_room_id;
-            let roomData = roomsWithLocations.find(room=>room.id === selectedRoom);
-            if (!roomData) {
-                DevExpress.ui.notify("Room not Found", "error", 3000);
-                e.cancel = true;
-                return;
-            }
-            let sector = roomData.sector;
-            let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomAccupancy || 0;
-            let dailyGuestCount = getTotalGuestsPerDay(scheduler, selectedRoom, appointmentData.startDate, appointmentData.endDate);
-            let bookingStart = new Date(appointmentData.startDate);
-            let bookingEnd = new Date(appointmentData.endDate);
-            
-            console.log("Total new guests:", totalNewGuests);
-            console.log("Room capacity:", roomCapacity);
-            console.log("Daily guest count:", dailyGuestCount);
-            
-            for (let d = new Date(bookingStart); d <= bookingEnd; d.setDate(d.getDate() + 1)) {
-                let dateKey = d.toISOString().split("T")[0]; // Format YYYY-MM-DD
-                let totalGuestsAfterAdding = (dailyGuestCount[dateKey] || 0) + totalNewGuests;
-                
-                console.log(`Checking capacity for ${dateKey}: ${totalGuestsAfterAdding}/${roomCapacity}`);
-                
-                if (totalGuestsAfterAdding > roomCapacity) {
-                    e.cancel = true; // Batalkan booking
-                    DevExpress.ui.notify(`Kapasitas penuh pada ${dateKey}! (${dailyGuestCount[dateKey] || 0}/${roomCapacity})`, "error", 3000);
-                    return;
-                }
-            }
-            
-            console.log("Capacity check passed. Proceeding with submission...");
-            
-            Swal.fire({
-                title: 'What do you want to do?',
-                text: 'Choose an option for this booking',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Submit Now',
-                cancelButtonText: 'Save as Draft',
-                reverseButtons: true
-            }).then((result) => {
-                console.log("Swal result:", result);
-                let requestStatus = 0;
+onAppointmentUpdating: function(e) {
+        const appointmentData = e.newData;
+        const formatDateForDB = (date) => {
+            const d = new Date(date);
+            return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
+        };
 
-                if(!result.isConfirmed) {
-                    console.log('Draft');
-                    sendRequest(apiurl + "/" + modname, "POST", {
-                        requestStatus: requestStatus,
-                        text: appointmentData.text,
-                        description: appointmentData.description,
-                        startDate: appointmentData.startDate,
-                        endDate: appointmentData.endDate,
-                        ghm_room_id: appointmentData.ghm_room_id,
-                        employee: appointmentData.employee,
-                        guest: appointmentData.guest,
-                        family: appointmentData.family,
-                        sector: sector,
-                    }); 
-                } else {
-                    console.log('Submit');
-                    sendRequest(apiurl + "/" + modname, "POST", {
-                        requestStatus: requestStatus,
-                        text: appointmentData.text,
-                        description: appointmentData.description,
-                        startDate: appointmentData.startDate,
-                        endDate: appointmentData.endDate,
-                        ghm_room_id: appointmentData.ghm_room_id,
-                        employee: appointmentData.employee,
-                        guest: appointmentData.guest,
-                        family: appointmentData.family,
-                        sector: sector,
-                    }).then(function(response){
+        appointmentData.startDate = formatDateForDB(appointmentData.startDate);
+        appointmentData.endDate = formatDateForDB(appointmentData.endDate);
+        appointmentData.id = e.oldData.id; // Pastikan id disertakan
+    
+        console.log('Data update yang akan dikirim:', appointmentData);
 
-                        let valapprovalAction = null;
-                        let actionForm = 'submission';
-                        let valApprovalType = '';
-                        let valremarks = '';
+        console.log('Start Update Submit');
+        let requestStatus = 0;
 
-                        if(response.status == 'success') {
-                            const reqid = response.data.id;
-                            sendRequest(apiurl + "/submissionrequest/"+reqid+"/"+modelclass, "POST", {
-                                requestStatus:1,
-                                action: actionForm,
-                                approvalAction: (valapprovalAction == null) ? 1 : parseInt(valapprovalAction),
-                                approvalType: valApprovalType,
-                                remarks: valremarks
-                            }).then(function(response){
-                                    if(response.status == 'success') {
-                                        Swal.fire({
-                                            icon: 'success',
-                                            title: 'Saved',
-                                            text: 'The submission has been submited.',
-                                        });
-                                    }
-                            });
-                        }
-                    });
-                }
-                
-            });
-               
-    },
+        Swal.fire({
+            title: 'What do you want to do?',
+            text: 'Choose an option for this booking',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Submit Now',
+            cancelButtonText: 'Save as Draft',
+            reverseButtons: true
+        }).then((result) => {
+            console.log("Swal result:", result);
+
+            if(!result.isConfirmed) {
+                console.log('Draft');
+                sendRequest(apiurl + "/" + modname + "/" + appointmentData.id, "PUT", {
+                    requestStatus: requestStatus,
+                    text: appointmentData.text,
+                    description: appointmentData.description,
+                    startDate: appointmentData.startDate,
+                    endDate: appointmentData.endDate,
+                    ghm_room_id: appointmentData.ghm_room_id,
+                    employee: appointmentData.employee,
+                    guest: appointmentData.guest,
+                    family: appointmentData.family,
+                }); 
+            } else {
+                sendRequest(apiurl + "/" + modname + "/" + appointmentData.id, "PUT", {
+                    requestStatus: requestStatus,
+                    text: appointmentData.text,
+                    description: appointmentData.description,
+                    startDate: appointmentData.startDate,
+                    endDate: appointmentData.endDate,
+                    ghm_room_id: appointmentData.ghm_room_id,
+                    employee: appointmentData.employee,
+                    guest: appointmentData.guest,
+                    family: appointmentData.family,
+                }).then(function(response){
+
+                    let valapprovalAction = null;
+                    let actionForm = 'submission';
+                    let valApprovalType = '';
+                    let valremarks = '';
+
+                    if(response.status == 'success') {
+                        const reqid = appointmentData.id;
+                        sendRequest(apiurl + "/submissionrequest/"+reqid+"/"+modelclass, "POST", {
+                            requestStatus:1,
+                            action: actionForm,
+                            approvalAction: (valapprovalAction == null) ? 1 : parseInt(valapprovalAction),
+                            approvalType: valApprovalType,
+                            remarks: valremarks
+                        }).then(function(response){
+                                if(response.status == 'success') {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Saved',
+                                        text: 'The submission has been submited.',
+                                    });
+                                }
+                        });
+                    }
+                });
+            }
+        });
+    }
+    });
