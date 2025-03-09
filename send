@@ -1,26 +1,13 @@
-var schedulerInstance = $("#scheduler").dxScheduler("instance");
+schedulerInstance.getDataSource().reload().done(function() {
+    console.log("Data successfully reloaded");
 
-$("#refreshButton").dxButton({
-    icon: "refresh",
-    text: "Refresh",
-    onClick: function() {
-        console.log("Refresh button clicked"); // Debug: cek apakah tombol ditekan
-        console.log("Scheduler instance:", schedulerInstance); // Debug: cek instance scheduler
+    schedulerInstance.getDataSource().load().done(function(data) {
+        console.log("New Data:", data); // Debug: cek apakah data baru sudah diambil dari DB
+        schedulerInstance.repaint();
+    }).fail(function(error) {
+        console.error("Failed to load new data:", error);
+    });
 
-        if (schedulerInstance) {
-            console.log("Reloading data...");
-            try {
-                schedulerInstance.getDataSource().reload().done(function() {
-                    console.log("Data successfully reloaded"); // Debug: cek apakah data berhasil dimuat ulang
-                    schedulerInstance.repaint();
-                }).fail(function(error) {
-                    console.error("Failed to reload data:", error); // Debug: cek error saat reload
-                });
-            } catch (err) {
-                console.error("Error during reload:", err);
-            }
-        } else {
-            console.error("Scheduler instance not found");
-        }
-    }
+}).fail(function(error) {
+    console.error("Failed to reload data:", error);
 });
