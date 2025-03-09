@@ -1,34 +1,148 @@
-ghm_booking:959 [Violation] Avoid using document.write().
-ghm_booking:1854 [Violation] Avoid using document.write().
-dx.all.js:9 
- W0001 - dxPopup - 'closeOnOutsideClick' option is deprecated in 22.1. Use the 'hideOnOutsideClick' option instead. See:
-http://js.devexpress.com/error/22_2/W0001
-ghm_booking.js:322 Booking Data: 
-(11) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
-jquery-3.5.1.min.js:2 [Violation] 'setTimeout' handler took 173ms
-ghm_booking.js:515 Appointment Data: 
-{startDate: '2025-03-09T10:00:00+08:00', endDate: '2025-03-09T22:00:00+08:00', ghm_room_id: 5}
-ghm_booking.js:522 total guest 0
-ghm_booking.js:525 total Kaps 1
-jquery-3.5.1.min.js:2 [Violation] 'click' handler took 372ms
-[Violation] Forced reflow while executing JavaScript took 49ms
-ghm_booking.js:522 total guest 0
-ghm_booking.js:525 total Kaps 1
-ghm_booking.js:522 total guest 1
-ghm_booking.js:525 total Kaps 1
-ghm_booking.js:715 onAppointmentAdding triggered 
-{appointmentData: {…}, cancel: false, component: i, element: S.fn.init}
-ghm_booking.js:740 Total new guests: 1
-ghm_booking.js:741 Room capacity: 1
-ghm_booking.js:742 Daily guest count: 
-{2025-03-24: 1, 2025-03-13: 1, 2025-03-14: 1, 2025-03-20: 1}
-ghm_booking.js:747 Checking capacity for 2025-03-09: 1/1
-ghm_booking.js:755 Capacity check passed. Proceeding with submission...
-ghm_booking.js:765 Swal result: 
-{isConfirmed: true, isDenied: false, isDismissed: false, value: true}
-ghm_booking.js:784 Submit
-ghm_booking.js:33 Scheduler data reloaded successfully.
-jquery-3.5.1.min.js:2 [Violation] 'setTimeout' handler took 164ms
-ghm_booking.js:318 
- Scheduler element not found in DOM.
-﻿
+function reloadScheduler() {
+    if (!schedulerInstance) {
+        console.error("Scheduler instance is not initialized.");
+        return;
+    }
+
+    const schedulerElement = document.querySelector("#scheduler");
+    if (!schedulerElement) {
+        console.error("Scheduler element not found in DOM.");
+        return;
+    }
+
+    schedulerInstance.getDataSource().reload().done(() => {
+        console.log("Scheduler data reloaded successfully.");
+        schedulerInstance.repaint(); // Perbarui tampilan scheduler
+    }).fail((error) => {
+        console.error("Failed to reload scheduler data:", error);
+    });
+}
+
+
+$(document).ready(function () {
+    const schedulerElement = document.querySelector("#scheduler");
+    if (!schedulerElement) {
+        console.error("Scheduler element not found in DOM.");
+        return;
+    }
+
+    schedulerInstance = $("#scheduler").dxScheduler({
+        // Konfigurasi scheduler...
+    }).dxScheduler("instance");
+
+    console.log("Scheduler initialized successfully.");
+});
+
+
+sendRequest(apiurl + "/" + modname, "POST", data)
+    .then(function (response) {
+        if (response.status === 'success') {
+            alert('Booking created successfully!');
+            reloadScheduler(); // Panggil reloadScheduler setelah POST berhasil
+        } else {
+            alert('Error: ' + response.message);
+        }
+    })
+    .catch(function (error) {
+        alert('Error: ' + error.responseText);
+    });
+
+
+$(function () {
+    // Inisialisasi scheduler
+    const schedulerElement = document.querySelector("#scheduler");
+    if (!schedulerElement) {
+        console.error("Scheduler element not found in DOM.");
+        return;
+    }
+
+    schedulerInstance = $("#scheduler").dxScheduler({
+        timeZone: 'Asia/Makassar',
+        dataSource: booking,
+        repaintChangesOnly: true,
+        views: ['month'],
+        currentView: 'month',
+        currentDate: new Date(),
+        firstDayOfWeek: 1,
+        startDayHour: 10,
+        endDayHour: 22,
+        colorExpr: "color",
+        showAllDayPanel: false,
+        height: 710,
+        groups: ['ghm_room_id'],
+        resources: [
+            {
+                fieldExpr: 'ghm_room_id',
+                allowMultiple: false,
+                dataSource: roomsWithLocations,
+                label: 'Room Name',
+            },
+        ],
+        editing: {
+            refreshMode: 'reshape',
+            mode: 'cell',
+            allowAdding: true,
+            allowUpdating: true,
+            allowDeleting: true,
+        },
+        // Konfigurasi lainnya...
+    }).dxScheduler("instance");
+
+    console.log("Scheduler initialized successfully.");
+
+    // Fungsi untuk memuat ulang data scheduler
+    function reloadScheduler() {
+        if (!schedulerInstance) {
+            console.error("Scheduler instance is not initialized.");
+            return;
+        }
+
+        const schedulerElement = document.querySelector("#scheduler");
+        if (!schedulerElement) {
+            console.error("Scheduler element not found in DOM.");
+            return;
+        }
+
+        schedulerInstance.getDataSource().reload().done(() => {
+            console.log("Scheduler data reloaded successfully.");
+            schedulerInstance.repaint(); // Perbarui tampilan scheduler
+        }).fail((error) => {
+            console.error("Failed to reload scheduler data:", error);
+        });
+    }
+
+    // Fungsi untuk menangani submit form
+    function submitFormData() {
+        if (dataSubmitted) return; // Prevent duplicate submissions
+
+        dataSubmitted = true;
+        const formData = $('#booking-form').serializeArray();
+        const employeeIdsField = formData.find(field => field.name === 'employee');
+        const guestField = formData.find(field => field.name === 'guest');
+        guestField.value = (guestField.value.split(',').map(name => name.trim()));
+        const familyField = formData.find(field => field.name === 'family');
+        familyField.value = serializeToJSON(familyField.value.split(',').map(name => name.trim()));
+
+        sendRequest(apiurl + "/" + modname, "POST", formData)
+            .then(function (response) {
+                if (response.status === 'success') {
+                    alert('Booking created successfully!');
+                    reloadScheduler(); // Memuat ulang data scheduler setelah POST berhasil
+                } else {
+                    alert('Error: ' + response.message);
+                }
+            })
+            .catch(function (error) {
+                alert('Error: ' + error.responseText);
+            })
+            .finally(function () {
+                dataSubmitted = false; // Reset the flag after submission
+            });
+    }
+
+    // Event listener untuk form submission
+    $('#booking-form').on('submit', function (event) {
+        event.preventDefault();
+        submitFormData();
+    });
+});
