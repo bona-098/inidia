@@ -1,3 +1,5 @@
-Blocked aria-hidden on an element because its descendant retained focus. The focus must not be hidden from assistive technology users. Avoid using aria-hidden on a focused element or its ancestor. Consider using the inert attribute instead, which will also prevent focus. For more details, see the aria-hidden section of the WAI-ARIA specification at https://w3c.github.io/aria/#aria-hidden.
-Element with focus: div
-Ancestor with aria-hidden:  <div id=​"layout-wrapper">​<header id=​"page-topbar" class=​"isvertical-topbar sticky" style=​"display:​ block;​">​…​</header>​<!-- ========== Left Sidebar Start ========== --><div class=​"vertical-menu">​…​</div>​<!-- Left Sidebar End --><header class=​"ishorizontal-topbar" style=​"display:​ none;​">​…​</header>​<!-- ============================================================== --><!-- Start right Content here --><!-- ============================================================== --><div class=​"main-content">​…​</div>​<!-- end main content--></div>​
+Submit
+ghm_booking.js:305 Scheduler data reloaded successfully.
+jquery-3.5.1.min.js:2 [Violation] 'setTimeout' handler took 159ms
+ghm_booking.js:305 Scheduler data reloaded successfully.
+jquery-3.5.1.min.js:2 [Violation] 'setTimeout' handler took 133ms
