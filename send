@@ -1,1 +1,33 @@
-❌ API Fetch Error: SyntaxError: Unexpected token '<', "<!doctype "... is not valid JSON
+[Violation] 'setTimeout' handler took 205ms
+ghm_booking.js:89 🔄 Fetching data from API...
+ghm_booking.js:94 🔍 Data Loaded from API: {status: 'show', message: 'The data is being displayed.', data: Array(34)}data: (34) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]message: "The data is being displayed."status: "show"[[Prototype]]: Object
+ghm_booking.js:97  ⚠️ Warning: Data kosong atau bukan array! Cek API backend.
+(anonymous) @ ghm_booking.js:97
+Promise.then
+loadData @ ghm_booking.js:93
+onClick @ ghm_booking.js:119
+execute @ dx.all.js:9
+t._executeAction @ dx.all.js:9
+t.execute @ dx.all.js:9
+(anonymous) @ dx.all.js:9
+s @ dx.all.js:9
+n.onClick @ dx.all.js:9
+p.onWidgetClick @ dx.all.js:9
+dispatch @ jquery-3.5.1.min.js:2
+v.handle @ jquery-3.5.1.min.js:2
+trigger @ jquery-3.5.1.min.js:2
+(anonymous) @ jquery-3.5.1.min.js:2
+each @ jquery-3.5.1.min.js:2
+each @ jquery-3.5.1.min.js:2
+trigger @ jquery-3.5.1.min.js:2
+trigger @ dx.all.js:9
+(anonymous) @ dx.all.js:9
+e.<computed>.e.<computed> @ dx.all.js:9
+t.fireEvent @ dx.all.js:9
+v @ dx.all.js:9
+dispatch @ jquery-3.5.1.min.js:2
+v.handle @ jquery-3.5.1.min.js:2
+ghm_booking.js:332 Scheduler data reloaded successfully.
+jquery-3.5.1.min.js:2 [Violation] 'setTimeout' handler took 206ms
+ghm_booking.js:89 🔄 Fetching data from API...
+ghm_booking.js:94 🔍 Data Loaded from API: {status: 'show', message: 'The data is being displayed.', data: Array(33)}
