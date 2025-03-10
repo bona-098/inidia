@@ -1,36 +1,39 @@
 function loadData() {
-        console.log("🔄 Fetching data from API...");
-    
-        // **Reset Data Source ke Null**
-        schedulerInstance.option("dataSource", null);
-        schedulerInstance.repaint();
-    
-        fetch(`ghm_booking`)
-            .then(response => response.json())
-            .then(response => {
-                let data = response.data;
-    
-                console.log("🔍 Data Loaded from API:", data);
-    
-                if (!Array.isArray(data) || data.length === 0) {
-                    console.warn("⚠️ Warning: Data kosong atau bukan array! Cek API backend.");
-                    return;
-                }
-    
-                // **Masukkan Data Baru**
-                schedulerInstance.option("dataSource", data);
-                schedulerInstance.repaint();
-                console.log("✅ Scheduler Updated with New Data!");
-            })
-            .catch(error => {
-                console.error("❌ API Fetch Error:", error);
-            });
-    }
-    // Tombol Refresh
-    $("#btn-refresh").dxButton({
-        icon: "refresh",
-        text: "Refresh",
-        onClick: function() {
-            loadData();
+    console.log("🔄 Fetching booking data from API...");
+
+    // **Reset Data Source ke Null sebelum Fetch**
+    schedulerInstance.option("dataSource", null);
+    schedulerInstance.repaint();
+
+    fetch('/ghm/dashboard', {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' } // Pastikan ini AJAX
+    })
+    .then(response => response.json())
+    .then(response => {
+        let data = response.booking; // Ambil hanya booking
+
+        console.log("🔍 Data Booking Loaded:", data);
+
+        if (!Array.isArray(data) || data.length === 0) {
+            console.warn("⚠️ Warning: Data booking kosong atau bukan array! Cek API backend.");
+            return;
         }
+
+        // **Masukkan Data Baru ke Scheduler**
+        schedulerInstance.option("dataSource", data);
+        schedulerInstance.repaint();
+        console.log("✅ Scheduler Updated with New Data!");
+    })
+    .catch(error => {
+        console.error("❌ API Fetch Error:", error);
     });
+}
+
+// Tombol Refresh
+$("#btn-refresh").dxButton({
+    icon: "refresh",
+    text: "Refresh",
+    onClick: function() {
+        loadData();
+    }
+});
