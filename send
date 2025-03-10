@@ -1,36 +1,3 @@
-function loadData() {
-    let dataSource = schedulerInstance.getDataSource();
-
-    console.log("🔄 Fetching data from API...");
-
-    // **1️⃣ Reset Data Source**
-    schedulerInstance.option("dataSource", null);
-    schedulerInstance.repaint();
-
-    // **2️⃣ Ambil Data Baru dari API**
-    fetch(`/devportal/api/ghm_booking`)
-        .then(response => response.json())
-        .then(response => {
-            let data = response.data;
-
-            console.log("🔍 Data Loaded from API:", data);
-
-            if (!Array.isArray(data) || data.length === 0) {
-                console.warn("⚠️ Warning: Data kosong atau bukan array! Cek API backend.");
-                return;
-            }
-
-            // **3️⃣ Paksa Clear Data Source untuk Hapus Cache Lama**
-            dataSource.store().clear(); 
-            dataSource.load(); // Reload data kosong dulu
-
-            setTimeout(() => {
-                schedulerInstance.option("dataSource", data);
-                schedulerInstance.repaint();
-                console.log("✅ Scheduler Updated with New Data!");
-            }, 500);
-        })
-        .catch(error => {
-            console.error("❌ API Fetch Error:", error);
-        });
-}
+ghm_booking.js:121 
+ ❌ API Fetch Error: TypeError: Cannot read properties of undefined (reading 'clear')
+    at ghm_booking.js:111:35
