@@ -1,0 +1,17 @@
+{
+    label: { text: 'Booking Period' },
+    editorType: 'dxDateRangeBox',
+    dataField: 'bookingPeriod',
+    editorOptions: {
+        type: 'datetime',
+        startDate: appointmentData.startDate,
+        endDate: appointmentData.endDate,
+        displayFormat: 'dd-MM-yyyy HH:mm:ss',
+        dateSerializationFormat: 'yyyy-MM-ddTHH:mm:ssZ',
+        onValueChanged: function(e) {
+            appointmentData.startDate = e.value[0]; // Set Start Date
+            appointmentData.endDate = e.value[1]; // Set End Date
+        }
+    },
+    validationRules: [{ type: "required", message: 'Booking period is required' }]
+}
