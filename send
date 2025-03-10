@@ -69,8 +69,8 @@ $(function () {
             console.log("Data Booking Loaded:", data);
             schedulerInstance.option("dataSource", data);
             schedulerInstance.repaint();
-        })
-        .catch(error => {
+        }).catch(function (error) {
+            alert('Error: ' + error.responseText);
         });
     }    
     $("#btn-refresh").dxButton({
@@ -155,9 +155,9 @@ $(function () {
         });
         updateScheduler(location, null);
     }
-    function isDateOverlap(start1, end1, start2, end2) {
-        return (new Date(start1) <= new Date(end2)) && (new Date(start2) <= new Date(end1));
-    }
+    // function isDateOverlap(start1, end1, start2, end2) {
+    //     return (new Date(start1) <= new Date(end2)) && (new Date(start2) <= new Date(end1));
+    // }
     function safeArray(arr) {
         return Array.isArray(arr) ? arr : [];
     }
@@ -332,13 +332,7 @@ $(function () {
                                                     timer: 2000,
                                                     showConfirmButton: false
                                                 });
-                                                loadData();
-                                            } else {
-                                                Swal.fire({
-                                                    icon: 'error',
-                                                    title: 'Error',
-                                                    text: response.message || "Failed to update booking."
-                                                });
+                                                loadData();    
                                             }
                                         })
                                         .catch(error => {
@@ -356,7 +350,7 @@ $(function () {
                 },
                 dataCellTemplate: function (cellData, index, container) {
                     const { ghm_room_id } = cellData.groups;
-                    const currentTraining = getCurrentTraining(cellData.startDate.getDate(), ghm_room_id);
+                    const currentBooking = getCurrentBooking(cellData.startDate.getDate(), ghm_room_id);
                     const wrapper = $('<div>')
                         .toggleClass(`employee-weekend-${ghm_room_id}`, isWeekEnd(cellData.startDate))
                         .appendTo(container)
@@ -365,7 +359,7 @@ $(function () {
                     wrapper.append($('<div>')
                         .text(cellData.text)
                         .text(cellData.roomOccupancy)
-                        .addClass(currentTraining)
+                        .addClass(currentBooking)
                         .addClass('day-cell'));
                 },
                 resourceCellTemplate: function (cellData) {
@@ -814,10 +808,10 @@ $(function () {
         const day = date.getDay();
         return day === 0 || day === 6;
     }
-    function getCurrentTraining(date, ghm_room_id) {
+    function getCurrentBooking(date, ghm_room_id) {
         const result = (date + ghm_room_id) % 3;
-        const currentTraining = `training-background-${result}`;
-        return currentTraining;
+        const currentBooking = `Booking-background-${result}`;
+        return currentBooking;
     }
     updateRoomSelector(uniqueLocations[0]);
     $('#btnadd').on('click', function () {
