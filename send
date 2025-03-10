@@ -1,28 +1,22 @@
 function loadData() {
-    let dataSource = schedulerInstance.getDataSource();
+    console.log("🔄 Fetching data from API...");
 
-    console.log("🧹 Clearing Data Source Cache...");
-    dataSource.store().clear();
-    dataSource.store().push([]);
-
-    console.log("🔄 Fetching new data...");
-    
     fetch(`http://yourdomain.com/api/events?t=${new Date().getTime()}`)
         .then(response => response.json())
         .then(data => {
-            console.log("🔍 Data Loaded:", data);
+            console.log("🔍 Data Loaded from API:", data);
 
             if (!Array.isArray(data) || data.length === 0) {
                 console.warn("⚠️ Warning: Data kosong atau bukan array! Cek API backend.");
                 return;
             }
 
-            schedulerInstance.option("dataSource", null);
+            schedulerInstance.option("dataSource", null); // Reset dulu
             schedulerInstance.repaint();
             setTimeout(() => {
                 schedulerInstance.option("dataSource", data);
                 schedulerInstance.repaint();
-                console.log("✅ Scheduler Updated!");
+                console.log("✅ Scheduler Updated with API Data!");
             }, 500);
         })
         .catch(error => {
