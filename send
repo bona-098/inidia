@@ -1,3 +1,56 @@
+public function dashboard()
+{
+    $user = auth()->user();
+    if (!$user) {
+        return redirect()->route('login');
+    }
+
+    $userId = $user->id;
+    $isAdmin = $user->isAdmin ?? false;
+    $requests = Ghm::query()
+        ->where(function ($query) use ($userId, $isAdmin) {
+            if ($isAdmin) {
+                $query->where("request_ghm.user_id", "!=", $userId)
+                    ->whereIn("request_ghm.requestStatus", [1, 3, 4]);
+            } else {
+                $query->whereIn("request_ghm.requestStatus", [3]);
+            }
+        })
+        ->orWhere("request_ghm.user_id", $userId)
+        ->with(['User', 'code', 'ghm_room'])
+        ->get();
+
+    $statusColors = [
+        0 => '#6C757D', // Draft (Abu)
+        1 => '#007BFF', // Pending (Biru)
+        2 => '#FFC107', // Approved (Kuning)
+        3 => '#28A745', // Rejected (Hijau)
+        4 => '#DC3545', // Completed (Merah)
+    ];        
+
+    $booking = $requests->map(function ($request) use ($statusColors) {
+        return [
+            'id' => $request->id,
+            'text' => $request->text ?? '',
+            'requestStatus' => $request->requestStatus ?? 0,
+            'startDate' => optional($request->startDate)->toIso8601String(),
+            'endDate' => optional($request->endDate)->toIso8601String(),
+            'requestColor' => $statusColors[$request->requestStatus] ?? '#6C757D',
+        ];
+    });
+
+    // ✅ Jika request dari AJAX, kembalikan JSON
+    if (request()->ajax()) {
+        return response()->json([
+            'status' => "show",
+            'message' => "Data loaded successfully",
+            'data' => $booking,
+        ]);
+    }
+
+    // Jika bukan AJAX, tetap kembalikan view
+    return view('dashboard.ghm_booking', ['booking' => $booking]);
+}
 public function index(Request $request)
 {
     try {            
@@ -46,3 +99,16 @@ public function index(Request $request)
         return response()->json(["status" => "error", "message" => $e->getMessage()]);
     }
 }
+
+
+
+fetch(`/dashboard`)  // ⬅ Fetch dari dashboard sekarang
+    .then(response => response.json())
+    .then(response => {
+        let data = response.data;
+        console.log("🔍 Data Loaded from Dashboard:", data);
+        
+        schedulerInstance.clear();  // Bersihkan sebelumnya
+        schedulerInstance.parse(data, "json"); // Tambahkan data baru
+    })
+    .catch(error => console.error("❌ API Fetch Error:", error));
