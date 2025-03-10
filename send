@@ -1,16 +1,120 @@
-fetch(`/dashboard`)
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP Error! Status: ${response.status}`);
+public function index(Request $request)
+{
+    try {            
+        $user = auth()->user();
+        if (!$user) {
+            return response()->json(['error' => 'Unauthorized'], 401);
         }
-        return response.json(); // Parsing JSON
-    })
-    .then(response => {
-        console.log("✅ Data Loaded from Dashboard:", response.data);
-        schedulerInstance.clear();
-        schedulerInstance.parse(response.data, "json");
-    })
-    .catch(error => {
-        console.error("❌ API Fetch Error:", error);
-        alert("Gagal memuat data! Cek apakah Anda sudah login.");
-    });
+
+        $userId = $user->id;
+        $isAdmin = $user->isAdmin ?? false;
+        $employeeId = $user->employee_id ?? null;
+        $module_id = $this->getModuleId($this->modulename);
+
+        // Query utama untuk request GHM
+        $requests = Ghm::query()
+            ->where(function ($query) use ($userId, $isAdmin, $employeeId) {
+                if ($isAdmin) {
+                    $query->where("request_ghm.user_id", "!=", $userId)
+                        ->whereIn("request_ghm.requestStatus", [1, 3, 4]);
+                } else {
+                    $query->whereIn("request_ghm.requestStatus", [3]);
+                }
+            })
+            ->orWhere("request_ghm.user_id", $userId)
+            ->with(['User', 'code', 'ghm_room'])
+            ->get();
+
+        // Data tambahan yang sebelumnya ada di dashboard
+        $rooms = Ghm_room::all();
+        $locations = Location::all();
+        $employees = Employee::with('Department')->get();
+        $departments = Department::all();
+
+        // Warna berdasarkan status booking
+        $statusColors = [
+            0 => '#6C757D', // Draft
+            1 => '#007BFF', // Pending
+            2 => '#FFC107', // Approved
+            3 => '#28A745', // Rejected
+            4 => '#DC3545', // Completed
+        ];        
+
+        // Menghitung total orang di setiap request
+        $totalPeopleData = DB::select("
+            SELECT 
+                request_ghm.id,
+                COALESCE(SUM(EmployeeCount), 0) AS totalEmployee,
+                COALESCE(SUM(GuestCount), 0) AS totalGuest,
+                COALESCE(SUM(FamilyCount), 0) AS totalFamily,
+                COALESCE(SUM(EmployeeCount + GuestCount + FamilyCount), 0) AS totalAll
+            FROM 
+                [request_ghm]
+            CROSS APPLY (SELECT COUNT(*) AS EmployeeCount FROM OPENJSON(employee)) AS EmpData
+            CROSS APPLY (SELECT COUNT(*) AS GuestCount FROM OPENJSON(guest)) AS GuestData
+            CROSS APPLY (SELECT COUNT(*) AS FamilyCount FROM OPENJSON(family)) AS FamilyData
+            GROUP BY id
+        ");    
+
+        // Konversi hasil query ke associative array dengan ID sebagai key
+        $totalPeopleArray = collect($totalPeopleData)->mapWithKeys(function ($item) {
+            return [$item->id => $item->totalAll];
+        });
+
+        // Proses booking untuk response JSON
+        $booking = $requests->map(function ($request) use ($rooms, $locations, $totalPeopleArray, $statusColors) {
+            $room = $rooms->firstWhere('id', $request->ghm_room_id);
+            $location = $room ? $locations->firstWhere('id', $room->location_id) : null;
+            $totalPeople = $totalPeopleArray[$request->id] ?? 0;
+            return [
+                'id' => $request->id,
+                'bu' => $request->bu,
+                'sector' => $request->sector,
+                'text' => $request->text ?? '',
+                'guest' => $request->guest ?? 0,
+                'family' => $request->family ?? 0,
+                'employee' => $request->employee ?? null,
+                'description' => $request->description ?? '',
+                'requestStatus' => $request->requestStatus ?? 0,
+                'startDate' => optional($request->startDate)->toIso8601String(),
+                'endDate' => optional($request->endDate)->toIso8601String(),
+                'code' => optional($request->code)->code ?? null,
+                'creator' => optional($request->User)->fullname ?? null,
+                'ghm_room_id' => $request->ghm_room_id,
+                'roomName' => optional($room)->roomName ?? null,
+                'location' => optional($location)->Location ?? null,
+                'totalPeople' => $totalPeople,
+                'requestColor' => $statusColors[$request->requestStatus] ?? '#6C757D', // Default abu-abu
+            ];
+        });
+
+        // Data ruangan dengan lokasi
+        $roomsWithLocations = $rooms->map(function ($room) use ($locations) {
+            $location = $locations->firstWhere('id', $room->location_id);
+            return [
+                'text' => $room->roomName ?? 'N/A',
+                'id' => $room->id ?? null,
+                'bu' => $room->bu ?? null,
+                'sector' => $room->sector ?? null,
+                'roomOccupancy' => $room->roomOccupancy ?? 0,
+                'location' => $location->Location ?? 'N/A',
+                'roomColor' => '#F0F0F0', // Warna default
+            ];
+        });
+
+        // Lokasi unik dari daftar ruangan
+        $uniqueLocations = $roomsWithLocations->pluck('location')->unique()->values();
+
+        return response()->json([
+            'status' => "show",
+            'message' => "Data fetched successfully",
+            'booking' => $booking,
+            'roomsWithLocations' => $roomsWithLocations,
+            'uniqueLocations' => $uniqueLocations,
+            'emplo' => $employees,
+            'departments' => $departments,
+        ])->setEncodingOptions(JSON_NUMERIC_CHECK);
+    } catch (\Exception $e) {
+        return response()->json(["status" => "error", "message" => $e->getMessage()]);
+    }
+}
