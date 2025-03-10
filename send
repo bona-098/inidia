@@ -1,8 +1,16 @@
-console.log('Booking Data:', booking); // Debug log for bookings
+public function index(Request $request)
+{
+    // Ambil data booking
+    $bookings = Booking::all();
 
-fetch(`api/ghm_booking`)
-            .then(response => response.json())
-            .then(response => {
-                let data = response.data;
-    
-                console.log("🔍 Data Loaded from API:", data);
+    // Cek jika request berasal dari fetch API
+    if ($request->expectsJson()) {
+        return response()->json([
+            'status' => 'success',
+            'data' => $bookings
+        ]);
+    }
+
+    // Jika bukan fetch API, kembalikan view biasa
+    return view('booking.index', compact('bookings'));
+}
