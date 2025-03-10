@@ -1,17 +1,36 @@
 function loadData() {
-    fetch('/ghm/dashboard', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Data Booking Refreshed:', data.booking); // Cek data
-
-            let scheduler = $("#scheduler").dxScheduler("instance");
-
-            // Hanya update jika data ada
-            if (data.booking && Array.isArray(data.booking)) {
-                scheduler.option("dataSource", data.booking);
-            } else {
-                console.warn("Data booking kosong atau salah format");
-            }
-        })
-        .catch(error => console.error('Error fetching data:', error));
-}
+        console.log("🔄 Fetching data from API...");
+    
+        // **Reset Data Source ke Null**
+        schedulerInstance.option("dataSource", null);
+        schedulerInstance.repaint();
+    
+        fetch(`ghm_booking`)
+            .then(response => response.json())
+            .then(response => {
+                let data = response.data;
+    
+                console.log("🔍 Data Loaded from API:", data);
+    
+                if (!Array.isArray(data) || data.length === 0) {
+                    console.warn("⚠️ Warning: Data kosong atau bukan array! Cek API backend.");
+                    return;
+                }
+    
+                // **Masukkan Data Baru**
+                schedulerInstance.option("dataSource", data);
+                schedulerInstance.repaint();
+                console.log("✅ Scheduler Updated with New Data!");
+            })
+            .catch(error => {
+                console.error("❌ API Fetch Error:", error);
+            });
+    }
+    // Tombol Refresh
+    $("#btn-refresh").dxButton({
+        icon: "refresh",
+        text: "Refresh",
+        onClick: function() {
+            loadData();
+        }
+    });
