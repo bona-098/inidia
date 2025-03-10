@@ -9,9 +9,13 @@ function loadData() {
     dataSource.reload().done(function() {
         console.log("Data successfully reloaded");
 
-        // Load ulang data untuk memastikan yang terbaru digunakan
+        // Load ulang data untuk memastikan data terbaru
         dataSource.load().done(function(data) {
-            console.log("New Data:", data); // Debugging: Pastikan data terbaru ada
+            console.log("New Data Loaded:", data); // Debugging: Cek apakah data muncul dari backend
+
+            if (data.length === 0) {
+                console.warn("Warning: Data kosong! Cek API backend.");
+            }
 
             schedulerInstance.option("dataSource", data); // Perbarui Scheduler
             schedulerInstance.repaint(); // Re-render Scheduler
@@ -23,12 +27,3 @@ function loadData() {
         console.error("Failed to reload data:", error);
     });
 }
-
-// Tombol Refresh
-$("#btn-refresh").dxButton({
-    icon: "refresh",
-    text: "Refresh",
-    onClick: function() {
-        loadData();
-    }
-});
