@@ -1,28 +1,8 @@
-function loadData() {
-    console.log("🔄 Fetching data from API...");
+console.log('Booking Data:', booking); // Debug log for bookings
 
-    // **Reset Data Source ke Null**
-    schedulerInstance.option("dataSource", null);
-    schedulerInstance.repaint();
-
-    fetch(`/devportal/api/ghm_booking`)
-        .then(response => response.json())
-        .then(response => {
-            let data = response.data;
-
-            console.log("🔍 Data Loaded from API:", data);
-
-            if (!Array.isArray(data) || data.length === 0) {
-                console.warn("⚠️ Warning: Data kosong atau bukan array! Cek API backend.");
-                return;
-            }
-
-            // **Masukkan Data Baru**
-            schedulerInstance.option("dataSource", data);
-            schedulerInstance.repaint();
-            console.log("✅ Scheduler Updated with New Data!");
-        })
-        .catch(error => {
-            console.error("❌ API Fetch Error:", error);
-        });
-}
+fetch(`api/ghm_booking`)
+            .then(response => response.json())
+            .then(response => {
+                let data = response.data;
+    
+                console.log("🔍 Data Loaded from API:", data);
