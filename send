@@ -1,3 +1,30 @@
-ghm_booking.js:121 
- ❌ API Fetch Error: TypeError: Cannot read properties of undefined (reading 'clear')
-    at ghm_booking.js:111:35
+function loadData() {
+    console.log("🔄 Fetching data from API...");
+
+    // **Dispose Data Source Lama**
+    let dataSource = schedulerInstance.getDataSource();
+    if (dataSource) {
+        dataSource.dispose();
+    }
+
+    fetch(`/devportal/api/ghm_booking`)
+        .then(response => response.json())
+        .then(response => {
+            let data = response.data;
+
+            console.log("🔍 Data Loaded from API:", data);
+
+            if (!Array.isArray(data) || data.length === 0) {
+                console.warn("⚠️ Warning: Data kosong atau bukan array! Cek API backend.");
+                return;
+            }
+
+            // **Update Scheduler dengan Data Baru**
+            schedulerInstance.option("dataSource", new DevExpress.data.DataSource({ store: data }));
+            schedulerInstance.repaint();
+            console.log("✅ Scheduler Updated!");
+        })
+        .catch(error => {
+            console.error("❌ API Fetch Error:", error);
+        });
+}
