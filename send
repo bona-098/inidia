@@ -1,22 +1,25 @@
 function loadData() {
-    let dataSource = schedulerInstance.getDataSource();
-
-    dataSource.reload().done(function() {
-        console.log("Data successfully reloaded");
-
-        dataSource.load().done(function(data) {
-            console.log("New Data:", data); // Debugging: Pastikan data terbaru ada
-            schedulerInstance.option("dataSource", data); // Perbarui Scheduler
-            schedulerInstance.repaint(); // Re-render Scheduler
+        let dataSource = schedulerInstance.getDataSource();
+    
+        dataSource.reload().done(function() {
+            console.log("Data successfully reloaded");
+    
+            dataSource.load().done(function(data) {
+                console.log("New Data:", data); // Debugging: Pastikan data terbaru ada
+                schedulerInstance.option("dataSource", data); // Perbarui Scheduler
+                schedulerInstance.repaint(); // Re-render Scheduler
+            }).fail(function(error) {
+                console.error("Failed to load new data:", error);
+            });
+    
         }).fail(function(error) {
-            console.error("Failed to load new data:", error);
+            console.error("Failed to reload data:", error);
         });
-
-    }).fail(function(error) {
-        console.error("Failed to reload data:", error);
+    }
+    $("#btn-refresh").dxButton({
+        icon: "refresh",
+        text: "Refresh",
+        onClick: function() {
+            loadData();
+        }
     });
-}
-onClick: function() {
-    // Proses delete atau cancel selesai
-    loadData(); // Tarik data baru tanpa refresh halaman
-}
