@@ -1,7 +1,7 @@
 function loadData() {
     console.log("🔄 Fetching data from API...");
 
-    fetch(`http://yourdomain.com/api/events?t=${new Date().getTime()}`)
+    fetch(`http://127.0.0.1:8000/api/events?t=${new Date().getTime()}`)
         .then(response => response.json())
         .then(data => {
             console.log("🔍 Data Loaded from API:", data);
@@ -11,7 +11,7 @@ function loadData() {
                 return;
             }
 
-            schedulerInstance.option("dataSource", null); // Reset dulu
+            schedulerInstance.option("dataSource", null);
             schedulerInstance.repaint();
             setTimeout(() => {
                 schedulerInstance.option("dataSource", data);
