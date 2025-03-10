@@ -1,65 +1,131 @@
-public function index(Request $request)
+public function dashboard(Request $request)
 {
-    try {            
-        $id = $request->id;
-        $user_id = $this->getAuth()->id;
-        $employeeid = $this->getEmployeeID()->id;
-        $module_id = $this->getModuleId($this->modulename);
-        $isAdmin = $this->getAuth()->isAdmin;
-        $requestData = $request->all();
-
-        $statusColors = [
-            0 => '#6C757D', // Draft
-            1 => '#007BFF', // Pending
-            2 => '#FFC107', // Approved
-            3 => '#28A745', // Rejected
-            4 => '#DC3545', // Completed
-        ];
-
-        $totalPeopleData = DB::select("
-            SELECT 
-                request_ghm.id,
-                COALESCE(SUM(EmployeeCount), 0) AS totalEmployee,
-                COALESCE(SUM(GuestCount), 0) AS totalGuest,
-                COALESCE(SUM(FamilyCount), 0) AS totalFamily,
-                COALESCE(SUM(EmployeeCount + GuestCount + FamilyCount), 0) AS totalAll
-            FROM 
-                [request_ghm]
-            CROSS APPLY (SELECT COUNT(*) AS EmployeeCount FROM OPENJSON(employee)) AS EmpData
-            CROSS APPLY (SELECT COUNT(*) AS GuestCount FROM OPENJSON(guest)) AS GuestData
-            CROSS APPLY (SELECT COUNT(*) AS FamilyCount FROM OPENJSON(family)) AS FamilyData
-            GROUP BY id
-        ");    
-
-        $totalPeopleArray = collect($totalPeopleData)->mapWithKeys(function ($item) {
-            return [$item->id => $item->totalAll];
-        });
-
-        $dataquery = $this->model->query();
-
-        if (!$isAdmin) {
-            $dataquery->leftJoin('tbl_assignment', function($join) use ($user_id, $module_id) {
-                $join->on('request_ghm.id', '=', 'tbl_assignment.req_id')
-                    ->where("request_ghm.user_id", "!=", $user_id)
-                    ->where('tbl_assignment.module_id', $module_id);
-            });
-        }
-
-        $data = $dataquery->selectRaw("request_ghm.id, request_ghm.requestStatus")
-            ->get();
-
-        $data->transform(function ($request) use ($totalPeopleArray, $statusColors) {
-            $request->totalPeople = $totalPeopleArray[$request->id] ?? 0;
-            $request->requestColor = $statusColors[$request->requestStatus] ?? '#6C757D';
-            return $request;
-        });
-
-        return response()->json([
-            'status' => "show",
-            'message' => $this->getMessage()['show'],
-            'data' => $data,
-        ])->setEncodingOptions(JSON_NUMERIC_CHECK);
-    } catch (\Exception $e) {
-        return response()->json(["status" => "error", "message" => $e->getMessage()]);
+    $user = auth()->user();
+    if (!$user) {
+        return redirect()->route('login');
     }
+
+    // Ambil data seperti biasa
+    $userId = $user->id;
+    $isAdmin = $user->isAdmin ?? false;
+    $employeeId = $user->employee_id ?? null;
+
+    $requests = Ghm::query()
+        ->where(function ($query) use ($userId, $isAdmin, $employeeId) {
+            if ($isAdmin) {
+                $query->where("request_ghm.user_id", "!=", $userId)
+                    ->whereIn("request_ghm.requestStatus", [1, 3, 4]);
+            } else {
+                $query->whereIn("request_ghm.requestStatus", [3]);
+            }
+        })
+        ->orWhere("request_ghm.user_id", $userId)
+        ->with(['User', 'code', 'ghm_room'])
+        ->get();
+
+    $rooms = Ghm_room::all();
+    $locations = Location::all();
+    $employees = Employee::with('Department')->get();
+    $departments = Department::all();
+
+    $statusColors = [
+        0 => '#6C757D', // Draft
+        1 => '#007BFF', // Pending
+        2 => '#FFC107', // Approved
+        3 => '#28A745', // Rejected
+        4 => '#DC3545', // Completed
+    ];
+
+    // Hitung totalPeople
+    $totalPeopleData = DB::select("
+        SELECT 
+            request_ghm.id,
+            COALESCE(SUM(EmployeeCount), 0) AS totalEmployee,
+            COALESCE(SUM(GuestCount), 0) AS totalGuest,
+            COALESCE(SUM(FamilyCount), 0) AS totalFamily,
+            COALESCE(SUM(EmployeeCount + GuestCount + FamilyCount), 0) AS totalAll
+        FROM 
+            [request_ghm]
+        CROSS APPLY (SELECT COUNT(*) AS EmployeeCount FROM OPENJSON(employee)) AS EmpData
+        CROSS APPLY (SELECT COUNT(*) AS GuestCount FROM OPENJSON(guest)) AS GuestData
+        CROSS APPLY (SELECT COUNT(*) AS FamilyCount FROM OPENJSON(family)) AS FamilyData
+        GROUP BY id
+    ");
+
+    $totalPeopleArray = collect($totalPeopleData)->mapWithKeys(fn($item) => [$item->id => $item->totalAll]);
+
+    $booking = $requests->map(function ($request) use ($rooms, $locations, $totalPeopleArray, $statusColors) {
+        $room = $rooms->firstWhere('id', $request->ghm_room_id);
+        $location = $room ? $locations->firstWhere('id', $room->location_id) : null;
+        $totalPeople = $totalPeopleArray[$request->id] ?? 0;
+        
+        return [
+            'id' => $request->id,
+            'bu' => $request->bu,
+            'sector' => $request->sector,
+            'text' => $request->text ?? '',
+            'guest' => $request->guest ?? 0,
+            'family' => $request->family ?? 0,
+            'employee' => $request->employee ?? null,
+            'description' => $request->description ?? '',
+            'requestStatus' => $request->requestStatus ?? 0,
+            'startDate' => optional($request->startDate)->toIso8601String(),
+            'endDate' => optional($request->endDate)->toIso8601String(),
+            'code' => optional($request->code)->code ?? null,
+            'creator' => optional($request->User)->fullname ?? null,
+            'ghm_room_id' => $request->ghm_room_id,
+            'roomName' => optional($room)->roomName ?? null,
+            'location' => optional($location)->Location ?? null,
+            'totalPeople' => $totalPeople,
+            'requestColor' => $statusColors[$request->requestStatus] ?? '#6C757D',
+        ];
+    });
+
+    if ($request->ajax()) {
+        return response()->json([
+            'booking' => $booking,
+            'roomsWithLocations' => $rooms->map(fn($room) => [
+                'text' => optional($room)->roomName ?? 'N/A',
+                'id' => optional($room)->id ?? null,
+                'bu' => optional($room)->bu ?? null,
+                'sector' => optional($room)->sector ?? null,
+                'roomOccupancy' => optional($room)->roomOccupancy ?? 0,
+                'location' => optional($locations->firstWhere('id', $room->location_id))->Location ?? 'N/A',
+                'roomColor' => '#F0F0F0',
+            ]),
+            'uniqueLocations' => $rooms->pluck('location_id')->unique()->values(),
+            'employees' => $employees,
+            'departments' => $departments,
+        ]);
+    }
+
+    return view('dashboard.ghm_booking', [
+        'booking' => $booking,
+        'roomsWithLocations' => $rooms->map(fn($room) => [
+            'text' => optional($room)->roomName ?? 'N/A',
+            'id' => optional($room)->id ?? null,
+            'bu' => optional($room)->bu ?? null,
+            'sector' => optional($room)->sector ?? null,
+            'roomOccupancy' => optional($room)->roomOccupancy ?? 0,
+            'location' => optional($locations->firstWhere('id', $room->location_id))->Location ?? 'N/A',
+            'roomColor' => '#F0F0F0',
+        ]),
+        'uniqueLocations' => $rooms->pluck('location_id')->unique()->values(),
+        'emplo' => $employees,
+        'departments' => $departments,
+    ]);
 }
+
+
+fetch('/ghm/dashboard', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Data Booking:', data.booking);
+        console.log('Rooms:', data.roomsWithLocations);
+        console.log('Locations:', data.uniqueLocations);
+        console.log('Employees:', data.employees);
+        console.log('Departments:', data.departments);
+
+        // Lakukan sesuatu dengan data, misalnya update UI
+    })
+    .catch(error => console.error('Error fetching data:', error));
