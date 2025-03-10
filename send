@@ -1,27 +1,26 @@
 function loadData() {
     let dataSource = schedulerInstance.getDataSource();
 
-    // Hapus cache data lama
-    dataSource.store().clear();
-    dataSource.store().push([]);
+    console.log("🔄 Memuat ulang data...");
 
-    // Reload data dari backend
     dataSource.reload().done(function() {
         console.log("✅ Data successfully reloaded");
 
         dataSource.load().done(function(data) {
-            console.log("🔍 Data Loaded:", data); // Debugging: Periksa data yang diterima
+            console.log("🔍 Data Loaded:", data);
 
             if (!Array.isArray(data) || data.length === 0) {
                 console.warn("⚠️ Warning: Data kosong atau bukan array! Cek API backend.");
                 return;
             }
 
-            schedulerInstance.option("dataSource", []); // Kosongkan dulu
-            schedulerInstance.option("dataSource", data); // Masukkan data baru
-            schedulerInstance.repaint(); // Render ulang Scheduler
-
-            console.log("✅ Scheduler Updated!");
+            schedulerInstance.option("dataSource", null); // Reset data source dulu
+            schedulerInstance.repaint();
+            setTimeout(() => {
+                schedulerInstance.option("dataSource", data);
+                schedulerInstance.repaint();
+                console.log("✅ Scheduler Updated!");
+            }, 500);
         }).fail(function(error) {
             console.error("❌ Failed to load new data:", error);
         });
