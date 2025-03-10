@@ -1,12 +1,9 @@
 function loadData() {
-    let dataSource = schedulerInstance.getDataSource();
-
-    console.log("🔄 Memuat ulang data...");
-
-    dataSource.reload().done(function() {
-        console.log("✅ Data successfully reloaded");
-
-        dataSource.load().done(function(data) {
+    console.log("🔄 Fetching data from API...");
+    
+    fetch("http://yourdomain.com/api/events")
+        .then(response => response.json())
+        .then(data => {
             console.log("🔍 Data Loaded:", data);
 
             if (!Array.isArray(data) || data.length === 0) {
@@ -14,18 +11,15 @@ function loadData() {
                 return;
             }
 
-            schedulerInstance.option("dataSource", null); // Reset data source dulu
+            schedulerInstance.option("dataSource", null); // Reset dulu
             schedulerInstance.repaint();
             setTimeout(() => {
                 schedulerInstance.option("dataSource", data);
                 schedulerInstance.repaint();
                 console.log("✅ Scheduler Updated!");
             }, 500);
-        }).fail(function(error) {
-            console.error("❌ Failed to load new data:", error);
+        })
+        .catch(error => {
+            console.error("❌ API Fetch Error:", error);
         });
-
-    }).fail(function(error) {
-        console.error("❌ Failed to reload data:", error);
-    });
 }
