@@ -1,25 +1,36 @@
-fetch(`http://127.0.0.1:8000/ghm_booking`)
-    .then(response => response.json())
-    .then(response => {
-        console.log("🔍 Data Loaded from API:", response);
+function loadData() {
+    let dataSource = schedulerInstance.getDataSource();
 
-        // Ambil hanya data array dari respons
-        let data = response.data;
+    console.log("🔄 Fetching data from API...");
 
-        if (!Array.isArray(data) || data.length === 0) {
-            console.warn("⚠️ Warning: Data kosong atau bukan array! Cek API backend.");
-            return;
-        }
+    // **1️⃣ Reset Data Source**
+    schedulerInstance.option("dataSource", null);
+    schedulerInstance.repaint();
 
-        // Reset dan update Scheduler dengan data terbaru
-        schedulerInstance.option("dataSource", null);
-        schedulerInstance.repaint();
-        setTimeout(() => {
-            schedulerInstance.option("dataSource", data);
-            schedulerInstance.repaint();
-            console.log("✅ Scheduler Updated!");
-        }, 500);
-    })
-    .catch(error => {
-        console.error("❌ API Fetch Error:", error);
-    });
+    // **2️⃣ Ambil Data Baru dari API**
+    fetch(`/devportal/api/ghm_booking`)
+        .then(response => response.json())
+        .then(response => {
+            let data = response.data;
+
+            console.log("🔍 Data Loaded from API:", data);
+
+            if (!Array.isArray(data) || data.length === 0) {
+                console.warn("⚠️ Warning: Data kosong atau bukan array! Cek API backend.");
+                return;
+            }
+
+            // **3️⃣ Paksa Clear Data Source untuk Hapus Cache Lama**
+            dataSource.store().clear(); 
+            dataSource.load(); // Reload data kosong dulu
+
+            setTimeout(() => {
+                schedulerInstance.option("dataSource", data);
+                schedulerInstance.repaint();
+                console.log("✅ Scheduler Updated with New Data!");
+            }, 500);
+        })
+        .catch(error => {
+            console.error("❌ API Fetch Error:", error);
+        });
+}
