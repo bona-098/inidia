@@ -1,100 +1,18 @@
-onAppointmentUpdating: async function (e) {
-    const appointmentData = e.newData;
-    const currentStatus = e.oldData.requestStatus;
-    console.log("cs:", currentStatus, "tipe :", typeof currentStatus);
-
-    if (!["0", "2"].includes(currentStatus)) {
-        DevExpress.ui.notify("Booking dengan status ini tidak dapat diperbarui!", "error", 3000);
-        e.cancel = true;
-        return;
-    }
-
-    let bookingData = await loadNewData();
-    let hasActiveBooking = bookingData.some(booking => booking.requestStatus === 1);
-    if (hasActiveBooking) {
-        DevExpress.ui.notify("Booking tidak dapat disubmit karena sudah ada booking dengan status aktif!", "error", 3000);
-        e.cancel = true;
-        return;
-    }
-
-    let guestCount = safeArray(appointmentData.guest).length;
-    let familyCount = safeArray(appointmentData.family).length;
-    let employeeCount = safeArray(appointmentData.employee).length;
-    let totalNewGuests = guestCount + familyCount + employeeCount;
-    
-    let selectedRoom = appointmentData.ghm_room_id;
-    let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;
-    let dailyGuestCount = await getTotalGuestsPerDay(bookingData, appointmentData.startDate, appointmentData.endDate);
-    let totalGuestsAfterAdding = (dailyGuestCount || 0) + totalNewGuests;
-
-    if (totalGuestsAfterAdding > roomCapacity) {
-        e.cancel = true;
-        DevExpress.ui.notify(`Room is overbooked! (${dailyGuestCount || 0}/${roomCapacity})`, "error", 3000);
-        loadData();
-        return;
-    }
-
-    const formatDateForDB = (date) => {
-        const d = new Date(date);
-        return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
-    };
-    
-    appointmentData.startDate = formatDateForDB(appointmentData.startDate);
-    appointmentData.endDate = formatDateForDB(appointmentData.endDate);
-    appointmentData.id = e.oldData.id;
-    
-    console.log('Data update yang akan dikirim:', appointmentData);
-    console.log('Start Update Submit');
-    let requestStatus = 0;
-    
-    Swal.fire({
-        title: 'What do you want to do?',
-        text: 'Choose an option for this booking',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Submit Now',
-        cancelButtonText: 'Save as Draft',
-        reverseButtons: true
-    }).then(async (result) => {
-        console.log("Swal result:", result);
-        if (!result.isConfirmed) {
-            console.log('Draft');
-        }
-        
-        // DOUBLE CHECK sebelum submit
-        let latestBookingData = await loadNewData();
-        let stillHasActiveBooking = latestBookingData.some(booking => booking.requestStatus === 1);
-        if (stillHasActiveBooking) {
-            DevExpress.ui.notify("Booking tidak dapat disubmit karena sudah ada booking dengan status aktif!", "error", 3000);
-            return;
-        }
-        
-        sendRequest(apiurl + "/" + modname + "/" + appointmentData.id, "PUT", {
-            requestStatus: requestStatus,
-            text: appointmentData.text,
-            description: appointmentData.description,
-            startDate: appointmentData.startDate,
-            endDate: appointmentData.endDate,
-            ghm_room_id: appointmentData.ghm_room_id,
-            employee: appointmentData.employee,
-            guest: appointmentData.guest,
-            family: appointmentData.family,
-        }).then(function (response) {
-            if (response.status == 'success') {
-                const reqid = appointmentData.id;
-                sendRequest(apiurl + "/submissionrequest/" + reqid + "/" + modelclass, "POST", {
-                    requestStatus: 1,
-                    action: 'submission',
-                    approvalAction: 1,
-                    approvalType: '',
-                    remarks: ''
-                }).then(function (response) {
-                    if (response.status == 'success') {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Saved',
-                            text: 'The submission has been submitted.',
-                        });
-                        loadData();
-                    }
-                });
+$totalPeopleData = DB::select("
+            SELECT 
+                request_ghm.id,
+                COALESCE(SUM(EmployeeCount), 0) AS totalEmployee,
+                COALESCE(SUM(GuestCount), 0) AS totalGuest,
+                COALESCE(SUM(FamilyCount), 0) AS totalFamily,
+                COALESCE(SUM(EmployeeCount + GuestCount + FamilyCount), 0) AS totalAll
+            FROM 
+                [request_ghm]
+            CROSS APPLY (SELECT COUNT(*) AS EmployeeCount FROM OPENJSON(employee)) AS EmpData
+            CROSS APPLY (SELECT COUNT(*) AS GuestCount FROM OPENJSON(guest)) AS GuestData
+            CROSS APPLY (SELECT COUNT(*) AS FamilyCount FROM OPENJSON(family)) AS FamilyData
+            GROUP BY id
+            ");            
+            // Konversi hasil query ke associative array dengan ID sebagai key
+            $totalPeopleArray = collect($totalPeopleData)->mapWithKeys(function ($item) {
+                return [$item->id => $item->totalAll];
+            });
