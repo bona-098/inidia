@@ -1,34 +1,94 @@
-async function getTotalGuestsPerDay(appointments, roomId, startDate, endDate) {
-    let dailyGuestCount = 0;
+onAppointmentAdding: async function (e) {
+    console.log("onAppointmentAdding triggered", e);
+    const appointmentData = e.appointmentData;
+    let scheduler = e.component;
 
-    appointments.forEach(appointment => {
-        // Lewati booking yang statusnya REJECT (requestStatus == 4)
-        if (appointment.requestStatus == 4) {
-            console.log(`Skipping rejected booking ID: ${appointment.id}`);
-            return;
-        }
+    // Hitung total tamu baru
+    let guestCount = safeArray(appointmentData.guest).length;
+    let familyCount = safeArray(appointmentData.family).length;
+    let employeeCount = safeArray(appointmentData.employee).length;
+    let totalNewGuests = guestCount + familyCount + employeeCount;
 
-        let bookingStart = new Date(startDate);
-        let bookingEnd = new Date(endDate);
+    if (totalNewGuests < 1) {
+        DevExpress.ui.notify("Guest type is required", "error", 2000);
+        e.cancel = true;
+        return;
+    }
 
-        if (
-            (appointment.ghm_room_id === roomId) &&
-            (
-                ((new Date(appointment.startDate) <= bookingEnd) && (new Date(appointment.startDate) > bookingStart)) ||
-                ((new Date(appointment.endDate) <= bookingEnd) && (new Date(appointment.endDate) > bookingStart))
-            )
-        ) {
-            console.log("Valid booking found:", appointment);
+    let selectedRoom = appointmentData.ghm_room_id;
+    let roomData = roomsWithLocations.find(room => room.id === selectedRoom);
+    if (!roomData) {
+        DevExpress.ui.notify("Room not Found", "error", 3000);
+        e.cancel = true;
+        return;
+    }
 
-            let guestCount = safeArray(appointment.guest).length;
-            let familyCount = safeArray(appointment.family).length;
-            let employeeCount = safeArray(appointment.employee).length;
-            let totalGuests = guestCount + familyCount + employeeCount;
+    let sector = roomData.sector;
+    let bookingData = await loadNewData();
 
-            dailyGuestCount = (dailyGuestCount || 0) + totalGuests;
-            console.log("Updated dailyGuestCount:", dailyGuestCount);
-        }
-    });
+    // Ambil kapasitas ruangan
+    let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;
 
-    return dailyGuestCount;
+    // Hitung jumlah tamu, abaikan booking dengan requestStatus == 4
+    let dailyGuestCount = await getTotalGuestsPerDay(
+        bookingData.filter(b => b.requestStatus != 4), // 🔥 Abaikan booking rejected
+        selectedRoom,
+        appointmentData.startDate,
+        appointmentData.endDate
+    );
+
+    let totalGuestsAfterAdding = (dailyGuestCount || 0) + totalNewGuests;
+
+    if (totalGuestsAfterAdding > roomCapacity) {
+        e.cancel = true;
+        DevExpress.ui.notify(`Room is fully booked! (${dailyGuestCount || 0}/${roomCapacity})`, "error", 3000);
+        loadData();
+        return;
+    }
+
+    console.log("Capacity check passed. Proceeding with submission...");
+}
+
+
+onAppointmentUpdating: async function (e) {
+    console.log("onAppointmentUpdating triggered", e);
+    const appointmentData = e.newData;
+    const currentStatus = e.oldData.requestStatus;
+
+    // Pastikan hanya booking dengan status tertentu yang bisa di-update
+    if (!["0", "2"].includes(currentStatus)) {
+        DevExpress.ui.notify("Booking dengan status ini tidak dapat diperbarui!", "error", 3000);
+        e.cancel = true;
+        return;
+    }
+
+    let selectedRoom = appointmentData.ghm_room_id;
+    let bookingData = await loadNewData();
+
+    // Kapasitas ruangan
+    let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;
+
+    // Hitung ulang jumlah tamu, abaikan booking yang ditolak (requestStatus == 4)
+    let dailyGuestCount = await getTotalGuestsPerDay(
+        bookingData.filter(b => b.requestStatus != 4), // 🔥 Abaikan booking rejected
+        selectedRoom,
+        appointmentData.startDate,
+        appointmentData.endDate
+    );
+
+    let guestCount = safeArray(appointmentData.guest).length;
+    let familyCount = safeArray(appointmentData.family).length;
+    let employeeCount = safeArray(appointmentData.employee).length;
+    let totalNewGuests = guestCount + familyCount + employeeCount;
+
+    let totalGuestsAfterUpdating = (dailyGuestCount || 0) + totalNewGuests;
+
+    if (totalGuestsAfterUpdating > roomCapacity) {
+        e.cancel = true;
+        DevExpress.ui.notify(`Room is fully booked! (${dailyGuestCount || 0}/${roomCapacity})`, "error", 3000);
+        loadData();
+        return;
+    }
+
+    console.log("Capacity check passed. Proceeding with update...");
 }
