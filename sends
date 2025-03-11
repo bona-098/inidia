@@ -1,134 +1,34 @@
-onAppointmentUpdating: async function (e) {
-    const appointmentData = e.newData;
-    const currentStatus = e.oldData.requestStatus;
-    
-    console.log("onAppointmentUpdating triggered", e);
-    console.log("Current Status:", currentStatus);
+async function getTotalGuestsPerDay(appointments, roomId, startDate, endDate) {
+    let dailyGuestCount = 0;
 
-    // Validasi: Booking hanya bisa diperbarui jika statusnya 0 atau 2
-    if (!["0", "2"].includes(currentStatus)) {
-        DevExpress.ui.notify("Booking dengan status ini tidak dapat diperbarui!", "error", 3000);
-        e.cancel = true;
-        return;
-    }
+    appointments.forEach(appointment => {
+        // Lewati booking yang statusnya REJECT (requestStatus == 4)
+        if (appointment.requestStatus == 4) {
+            console.log(`Skipping rejected booking ID: ${appointment.id}`);
+            return;
+        }
 
-    // Ambil data terbaru dari database
-    let bookingData = await loadNewData();
+        let bookingStart = new Date(startDate);
+        let bookingEnd = new Date(endDate);
 
-    // Validasi jumlah tamu yang diperbarui
-    let guestCount = safeArray(appointmentData.guest).length;
-    let familyCount = safeArray(appointmentData.family).length;
-    let employeeCount = safeArray(appointmentData.employee).length;
-    let totalNewGuests = guestCount + familyCount + employeeCount;
+        if (
+            (appointment.ghm_room_id === roomId) &&
+            (
+                ((new Date(appointment.startDate) <= bookingEnd) && (new Date(appointment.startDate) > bookingStart)) ||
+                ((new Date(appointment.endDate) <= bookingEnd) && (new Date(appointment.endDate) > bookingStart))
+            )
+        ) {
+            console.log("Valid booking found:", appointment);
 
-    if (totalNewGuests < 1) {
-        DevExpress.ui.notify("Guest type is required", "error", 2000);
-        e.cancel = true;
-        return;
-    }
+            let guestCount = safeArray(appointment.guest).length;
+            let familyCount = safeArray(appointment.family).length;
+            let employeeCount = safeArray(appointment.employee).length;
+            let totalGuests = guestCount + familyCount + employeeCount;
 
-    // Validasi apakah ruangan tersedia
-    let selectedRoom = appointmentData.ghm_room_id;
-    let roomData = roomsWithLocations.find(room => room.id === selectedRoom);
-    if (!roomData) {
-        DevExpress.ui.notify("Room not Found", "error", 3000);
-        e.cancel = true;
-        return;
-    }
-
-    let sector = roomData.sector;
-    let roomCapacity = roomData.roomOccupancy || 0;
-
-    // Validasi apakah ruangan masih memiliki kapasitas cukup setelah update
-    let dailyGuestCount = await getTotalGuestsPerDay(bookingData, selectedRoom, appointmentData.startDate, appointmentData.endDate);
-    let totalGuestsAfterUpdating = (dailyGuestCount || 0) + totalNewGuests;
-
-    console.log("Total new guests:", totalNewGuests);
-    console.log("Room capacity:", roomCapacity);
-    console.log("Daily guest count (latest from DB):", dailyGuestCount);
-    console.log("Total guests after updating:", totalGuestsAfterUpdating);
-
-    if (totalGuestsAfterUpdating > roomCapacity) {
-        e.cancel = true;
-        DevExpress.ui.notify(`Room is overbooked! (${dailyGuestCount || 0}/${roomCapacity})`, "error", 3000);
-        loadData(); // Reload data agar user melihat perubahan terbaru dari DB
-        return;
-    }
-
-    console.log("Capacity check passed. Proceeding with update...");
-
-    const formatDateForDB = (date) => {
-        const d = new Date(date);
-        return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
-    };
-
-    appointmentData.startDate = formatDateForDB(appointmentData.startDate);
-    appointmentData.endDate = formatDateForDB(appointmentData.endDate);
-    appointmentData.id = e.oldData.id;
-
-    Swal.fire({
-        title: 'What do you want to do?',
-        text: 'Choose an option for this booking',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Submit Now',
-        cancelButtonText: 'Save as Draft',
-        reverseButtons: true
-    }).then((result) => {
-        console.log("Swal result:", result);
-        let requestStatus = 0;
-        if (!result.isConfirmed) {
-            console.log('Draft');
-            sendRequest(apiurl + "/" + modname + "/" + appointmentData.id, "PUT", {
-                requestStatus: requestStatus,
-                text: appointmentData.text,
-                description: appointmentData.description,
-                startDate: appointmentData.startDate,
-                endDate: appointmentData.endDate,
-                ghm_room_id: appointmentData.ghm_room_id,
-                employee: appointmentData.employee,
-                guest: appointmentData.guest,
-                family: appointmentData.family,
-            }).then(() => {
-                loadData();
-            });
-        } else {
-            sendRequest(apiurl + "/" + modname + "/" + appointmentData.id, "PUT", {
-                requestStatus: requestStatus,
-                text: appointmentData.text,
-                description: appointmentData.description,
-                startDate: appointmentData.startDate,
-                endDate: appointmentData.endDate,
-                ghm_room_id: appointmentData.ghm_room_id,
-                employee: appointmentData.employee,
-                guest: appointmentData.guest,
-                family: appointmentData.family,
-            }).then((response) => {
-                loadData();
-                let valapprovalAction = null;
-                let actionForm = 'submission';
-                let valApprovalType = '';
-                let valremarks = '';
-                if (response.status == 'success') {
-                    const reqid = appointmentData.id;
-                    sendRequest(apiurl + "/submissionrequest/" + reqid + "/" + modelclass, "POST", {
-                        requestStatus: 1,
-                        action: actionForm,
-                        approvalAction: (valapprovalAction == null) ? 1 : parseInt(valapprovalAction),
-                        approvalType: valApprovalType,
-                        remarks: valremarks
-                    }).then((response) => {
-                        if (response.status == 'success') {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Saved',
-                                text: 'The submission has been submitted.',
-                            });
-                            loadData();
-                        }
-                    });
-                }
-            });
+            dailyGuestCount = (dailyGuestCount || 0) + totalGuests;
+            console.log("Updated dailyGuestCount:", dailyGuestCount);
         }
     });
+
+    return dailyGuestCount;
 }
