@@ -55,10 +55,18 @@ onAppointmentUpdating: async function (e) {
         confirmButtonText: 'Submit Now',
         cancelButtonText: 'Save as Draft',
         reverseButtons: true
-    }).then((result) => {
+    }).then(async (result) => {
         console.log("Swal result:", result);
         if (!result.isConfirmed) {
             console.log('Draft');
+        }
+        
+        // DOUBLE CHECK sebelum submit
+        let latestBookingData = await loadNewData();
+        let stillHasActiveBooking = latestBookingData.some(booking => booking.requestStatus === 1);
+        if (stillHasActiveBooking) {
+            DevExpress.ui.notify("Booking tidak dapat disubmit karena sudah ada booking dengan status aktif!", "error", 3000);
+            return;
         }
         
         sendRequest(apiurl + "/" + modname + "/" + appointmentData.id, "PUT", {
@@ -90,7 +98,3 @@ onAppointmentUpdating: async function (e) {
                         loadData();
                     }
                 });
-            }
-        });
-    });
-}
