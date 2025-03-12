@@ -1,34 +1,34 @@
 { 
-            dataField: "startDate",
-            caption: "Check in",
-            cellTemplate: function(container, options) {
-                if (!options.value) {
-                    container.text(" ");
-                } else {
-                const date = new Date(options.value);
-                const formattedDate = date.toISOString().split('T') [0];
-                const formattedTime = date.toTimeString().split(' ') [0];
-                container.html(`
-                    <div>${formattedDate}</div>
-                    <div>${formattedTime}</div>                    
-                    `);
-                }
-            },
-        },
-        { 
-            dataField: "endDate",
-            caption: "Check out",
-            cellTemplate: function(container, options) {
-                if (!options.value) {
-                    container.text(" ");
-                } else {
-                const date = new Date(options.value);
-                const formattedDate = date.toISOString().split('T') [0];
-                const formattedTime = date.toTimeString().split(' ') [0];
-                container.html(`
-                    <div>${formattedDate}</div>
-                    <div>${formattedTime}</div>                    
-                    `);
-                }
-            },
-        },
+    dataField: "startDate",
+    caption: "Check in",
+    cellTemplate: function(container, options) {
+        if (!options.value || isNaN(new Date(options.value).getTime())) {
+            container.text("N/A"); // Tampilkan "N/A" jika tanggal tidak valid
+        } else {
+            const date = new Date(options.value);
+            const formattedDate = date.toISOString().split('T')[0];
+            const formattedTime = date.toTimeString().split(' ')[0];
+            container.html(`
+                <div>${formattedDate}</div>
+                <div>${formattedTime}</div>                    
+            `);
+        }
+    },
+},
+{ 
+    dataField: "endDate",
+    caption: "Check out",
+    cellTemplate: function(container, options) {
+        if (!options.value || isNaN(new Date(options.value).getTime())) {
+            container.text("N/A"); // Tampilkan "N/A" jika tanggal tidak valid
+        } else {
+            const date = new Date(options.value);
+            const formattedDate = date.toISOString().split('T')[0];
+            const formattedTime = date.toTimeString().split(' ')[0];
+            container.html(`
+                <div>${formattedDate}</div>
+                <div>${formattedTime}</div>                    
+            `);
+        }
+    },
+}
