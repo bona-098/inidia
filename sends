@@ -1,3 +1,10 @@
+SELECT 
+    (SELECT STRING_AGG(value, ', ') 
+     FROM OPENJSON(request_ghm.guest)) AS guest,
+    (SELECT STRING_AGG(value, ', ') 
+     FROM OPENJSON(request_ghm.family)) AS family
+FROM request_ghm;
+
 (SELECT STRING_AGG(emp.fullname, ', ')
                 FROM OPENJSON(request_ghm.employee) 
                 WITH (employee_id INT '$')
