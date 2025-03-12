@@ -4,26 +4,30 @@
     width: 200,
     lookup: {
         dataSource: function(options) {
-            // Coba ambil instance form
-            let formInstance = options && options.component ? options.component : null;
+            try {
+                // Coba akses formInstance dengan cara yang lebih aman
+                let formInstance = DevExpress.ui.dxForm.getInstance($("#form-container")); 
 
-            if (!formInstance) {
-                console.error("Form instance tidak ditemukan.");
+                if (!formInstance) {
+                    console.error("Form instance tidak ditemukan.");
+                    return [];
+                }
+
+                let formData = formInstance.option("formData") || {};
+                let currentSector = formData.sector || null;
+
+                if (!currentSector) {
+                    console.warn("Sector tidak ditemukan dalam formData.");
+                    return [];
+                }
+
+                // Filter daftar room berdasarkan sector
+                return listOption('/list-room', 'id', 'roomName')
+                    .filter(room => room.sector === currentSector);
+            } catch (error) {
+                console.error("Error dalam dataSource:", error);
                 return [];
             }
-
-            // Ambil data yang sedang diedit
-            let formData = formInstance.option("formData") || {};
-            let currentSector = formData.sector || null;
-
-            if (!currentSector) {
-                console.warn("Sector tidak ditemukan dalam formData.");
-                return [];
-            }
-
-            // Ambil daftar room yang sesuai dengan sector
-            return listOption('/list-room', 'id', 'roomName')
-                .filter(room => room.sector === currentSector);
         },
         valueExpr: 'id',
         displayExpr: 'roomName',
