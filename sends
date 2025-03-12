@@ -4,17 +4,26 @@
     width: 200,
     lookup: {
         dataSource: function(options) {
-            // Ambil data form yang sedang diedit
-            const formData = options.component.option("formData");  
-            const currentSector = formData ? formData.sector : null;  
+            // Coba ambil instance form
+            let formInstance = options && options.component ? options.component : null;
 
-            // Pastikan sector ada sebelum melakukan filter
-            if (!currentSector) {
+            if (!formInstance) {
+                console.error("Form instance tidak ditemukan.");
                 return [];
             }
 
+            // Ambil data yang sedang diedit
+            let formData = formInstance.option("formData") || {};
+            let currentSector = formData.sector || null;
+
+            if (!currentSector) {
+                console.warn("Sector tidak ditemukan dalam formData.");
+                return [];
+            }
+
+            // Ambil daftar room yang sesuai dengan sector
             return listOption('/list-room', 'id', 'roomName')
-                .filter(room => room.sector === currentSector); 
+                .filter(room => room.sector === currentSector);
         },
         valueExpr: 'id',
         displayExpr: 'roomName',
