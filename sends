@@ -1,6 +1,20 @@
-DevExpress.ui.notify(
-                            `Room has been booked! (${dailyGuestCount || 0}/${roomCapacity})<br>Kamar telah dipesan untuk: (${dailyGuestCount || 0}/${roomCapacity})`,
-                            "error",
-                            3000,
-                            { encodeHtml: true }
-                        );
+DevExpress.ui.notify({
+    message: `<span>Room has been booked! (${dailyGuestCount || 0}/${roomCapacity})</span><br>
+              <span>Kamar telah dipesan untuk: (${dailyGuestCount || 0}/${roomCapacity})</span>`,
+    type: "error",
+    displayTime: 3000,
+    contentTemplate: (e) => {
+        e.append(`
+            <div style="white-space: pre-line;">
+                <strong>Room has been booked!</strong> (${dailyGuestCount || 0}/${roomCapacity})<br>
+                <strong>Kamar telah dipesan untuk:</strong> (${dailyGuestCount || 0}/${roomCapacity})
+            </div>
+        `);
+    }
+});
+
+
+DevExpress.ui.notify([
+    `Room has been booked! (${dailyGuestCount || 0}/${roomCapacity})`,
+    `Kamar telah dipesan untuk: (${dailyGuestCount || 0}/${roomCapacity})`
+], "error", 3000);
