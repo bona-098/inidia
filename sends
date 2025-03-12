@@ -1,27 +1,51 @@
+(SELECT STRING_AGG(emp.fullname, ', ')
+                FROM OPENJSON(request_ghm.employee) 
+                WITH (employee_id INT '$')
+                LEFT JOIN employee.tbl_employee AS emp
+                ON emp.id = employee_id
+                ) AS employee_fullname,
+                (SELECT STRING_AGG(value, ', ') FROM OPENJSON(request_ghm.guest)) AS guest,
+                (SELECT STRING_AGG(value, ', ') FROM OPENJSON(request_ghm.family)) AS family,
+
 {
-    caption: 'Family',
-    dataField: 'family',
-    allowFiltering: false,
-    allowHeaderFiltering: false,
-    calculateDisplayValue: function(rowData) {
-        return rowData.family ? rowData.family : 'tidak ada data';
-    }
-},
-{
-    caption: 'Guest',
-    dataField: 'guest',
-    allowFiltering: false,
-    allowHeaderFiltering: false,
-    calculateDisplayValue: function(rowData) {
-        return rowData.guest ? rowData.guest : 'tidak ada data';
-    }
-},
-{
-    caption: 'Employee',
-    dataField: 'employee_fullname',
-    allowFiltering: false,
-    allowHeaderFiltering: false,
-    calculateDisplayValue: function(rowData) {
-        return rowData.employee_fullname ? rowData.employee_fullname : 'tidak ada data';
-    }
-}
+                                caption: 'family',
+                                dataField: 'family',
+                                allowFiltering: false,
+                                allowHeaderFiltering: false,
+                                editorOptions: { 
+                                    readOnly: true,
+                                    customConfig: function(options) {
+                                        if (options.value === null || options.value === undefined || options.value === '') {
+                                            options.text = 'tidak ada data';
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                caption: 'guest',
+                                dataField: 'guest',
+                                allowFiltering: false,
+                                allowHeaderFiltering: false,
+                                editorOptions: { 
+                                    readOnly: true,
+                                    customConfig: function(options) {
+                                        if (options.value === null || options.value === undefined || options.value === '') {
+                                            options.text = 'tidak ada data';
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                caption: 'employee',
+                                dataField: 'employee_fullname',
+                                allowFiltering: false,
+                                allowHeaderFiltering: false,
+                                editorOptions: { 
+                                    readOnly: true,
+                                    customConfig: function(options) {
+                                        if (options.value === null || options.value === undefined || options.value === '') {
+                                            options.text = 'tidak ada data';
+                                        }
+                                    }
+                                }
+                            },
