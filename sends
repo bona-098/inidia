@@ -1,13 +1,25 @@
-$data->transform(function ($item) {
-    // Jika guest adalah array, ubah ke string
-    if (is_array($item->guest)) {
-        $item->guest = implode(', ', $item->guest);
-    }
-    
-    // Jika family adalah array, ubah ke string
-    if (is_array($item->family)) {
-        $item->family = implode(', ', $item->family);
-    }
-
-    return $item;
-});
+VM83:174 
+ Uncaught RangeError: Invalid time value
+    at Date.toISOString (<anonymous>)
+    at cellTemplate (<anonymous>:174:44)
+    at Object.render (dx.all.js:9:2140302)
+    at t._renderDelayedTemplatesCore (dx.all.js:9:2139864)
+    at t.renderDelayedTemplates (dx.all.js:9:2139359)
+    at t.renderDelayedTemplates (dx.all.js:9:2525064)
+    at t.renderDelayedTemplates (dx.all.js:9:47380)
+    at t.renderDelayedTemplates (dx.all.js:9:2399440)
+    at t.renderDelayedTemplates (dx.all.js:9:47380)
+    at t._renderCore (dx.all.js:9:2141950)
+VM83:174 
+ Uncaught RangeError: Invalid time value
+    at Date.toISOString (<anonymous>)
+    at cellTemplate (<anonymous>:174:44)
+    at Object.render (dx.all.js:9:2140302)
+    at t._renderDelayedTemplatesCore (dx.all.js:9:2139864)
+    at t.renderDelayedTemplates (dx.all.js:9:2139359)
+    at t.renderDelayedTemplates (dx.all.js:9:2525064)
+    at t.renderDelayedTemplates (dx.all.js:9:47380)
+    at t.renderDelayedTemplates (dx.all.js:9:2399440)
+    at t.renderDelayedTemplates (dx.all.js:9:47380)
+    at t._renderCore (dx.all.js:9:2141950)
+﻿
