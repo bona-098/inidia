@@ -1,4 +1,65 @@
-{
-    "status": "error",
-    "message": "Call to undefined method App\\Models\\Submission\\Ghm::transform()"
-}
+public function show($id)
+    {
+
+        try {
+            $dataquery = $this->model->query();
+            
+
+            $data = $dataquery
+                ->selectRaw("request_ghm.id,
+            codes.code, 
+            request_ghm.user_id,
+            request_ghm.description,
+            request_ghm.ghm_room_id,   
+            request_ghm_room.bu,
+            request_ghm_room.sector,          
+            request_ghm.text,
+            request_ghm.description,
+            request_ghm.requestStatus,
+            request_ghm.startDate,
+            request_ghm.endDate,
+            request_ghm.created_at,
+            request_ghm.updated_at,
+            (SELECT STRING_AGG(emp.fullname, ', ')
+                FROM OPENJSON(request_ghm.employee) 
+                WITH (employee_id INT '$')
+                LEFT JOIN employee.tbl_employee AS emp
+                ON emp.id = employee_id
+                ) AS employee_fullname,
+            COALESCE(request_ghm.guest, '[]') AS guest,
+            COALESCE(request_ghm.family, '[]') AS family,
+            request_ghm_room.location_id, 
+            employee.tbl_location.Location               
+            ")
+            ->leftJoin('codes', 'request_ghm.code_id', '=', 'codes.id')
+            ->leftJoin('request_ghm_room', 'request_ghm.ghm_room_id', '=', 'request_ghm_room.id')
+            ->leftJoin('employee.tbl_location', 'request_ghm_room.location_id', '=', 'employee.tbl_location.id')
+            ->where('request_ghm.id',$id)
+            ->first();
+
+            if($data->code_id == null) {
+                $data->code_id = $this->generateCode($this->modulename);
+                $data->save();
+            }
+            // dd($data);
+            $data->transform(function ($item) {
+                // Jika guest adalah array, ubah ke string
+                if (is_array($item->guest)) {
+                    $item->guest = implode(', ', $item->guest);
+                }
+                
+                // Jika family adalah array, ubah ke string
+                if (is_array($item->family)) {
+                    $item->family = implode(', ', $item->family);
+                }
+            
+                return $item;
+            });
+            return response()->json(['status' => "show", "message" => $this->getMessage()['show'] , 
+            'data' => $data])->setEncodingOptions(JSON_NUMERIC_CHECK);
+
+        } catch (\Exception $e) {
+
+            return response()->json(["status" => "error", "message" => $e->getMessage()]);
+        }
+    }
