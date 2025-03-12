@@ -1,45 +1,25 @@
-onAppointmentUpdating: async function (e) {
-    console.log("onAppointmentUpdating triggered", e);
-    const appointmentData = e.newData;
-    const oldAppointmentData = e.oldData;
-    const currentStatus = oldAppointmentData.requestStatus;
-
-    // Pastikan hanya booking dengan status tertentu yang bisa di-update
-    if (!["0", "2"].includes(currentStatus)) {
-        DevExpress.ui.notify("Booking dengan status ini tidak dapat diperbarui!", "error", 3000);
-        e.cancel = true;
-        return;
-    }
-
-    let selectedRoom = appointmentData.ghm_room_id;
-    let bookingData = await loadNewData();
-
-    // Kapasitas ruangan
-    let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;
-
-    // **Filter data booking:**
-    let validBookings = bookingData.filter(b => 
-        b.requestStatus != 4 && // Abaikan booking yang ditolak
-        b.id !== oldAppointmentData.id // **Abaikan booking yang sedang diperbarui**
-    );
-
-    // Hitung ulang jumlah tamu yang valid untuk hari itu
-    let dailyGuestCount = await getTotalGuestsPerDay(validBookings, selectedRoom, appointmentData.startDate, appointmentData.endDate);
-
-    // Hitung tamu baru dalam update
-    let guestCount = safeArray(appointmentData.guest).length;
-    let familyCount = safeArray(appointmentData.family).length;
-    let employeeCount = safeArray(appointmentData.employee).length;
-    let totalNewGuests = guestCount + familyCount + employeeCount;
-
-    let totalGuestsAfterUpdating = (dailyGuestCount || 0) + totalNewGuests;
-
-    if (totalGuestsAfterUpdating > roomCapacity) {
-        e.cancel = true;
-        DevExpress.ui.notify(`Room is fully booked! (${dailyGuestCount || 0}/${roomCapacity})`, "error", 3000);
-        loadData();
-        return;
-    }
-
-    console.log("Capacity check passed. Proceeding with update...");
-}
+{
+                                caption: 'BU',
+                                dataField: 'bu',
+                                allowFiltering: false,
+                                allowHeaderFiltering: false,
+                            } , 
+                            {
+                                caption: 'Lokasi',
+                                dataField: 'sector',
+                                allowFiltering: false,
+                                allowHeaderFiltering: false,
+                            } ,               
+                            {
+                                caption: 'Room',
+                                dataField: 'ghm_room_id', // Pastikan struktur data benar
+                                width: 200,
+                                lookup: {
+                                    dataSource: listOption('/list-room', 'id', 'roomName'),
+                                    valueExpr: 'id',
+                                    displayExpr: function (item) {
+                                        return item.roomName + ' | ' + item.sector +' | '+ item.bu; // Menggabungkan roomName dan sector
+                                    },
+                                },
+                                validationRules: [{ type: "required" }],
+                            },
