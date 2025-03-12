@@ -13,8 +13,9 @@
     dataField: 'ghm_room_id',
     width: 250,
     lookup: {
-        dataSource: function (options) {
-            return listOption('/list-room').filter(room => 
+        dataSource: async function (options) {
+            let allRooms = await listOption('/list-room'); // Ambil data dari server
+            return allRooms.filter(room => 
                 room.bu === options.data.bu && room.sector === options.data.sector
             );
         },
