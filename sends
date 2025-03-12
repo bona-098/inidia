@@ -1,25 +1,32 @@
-{
-                                caption: 'BU',
-                                dataField: 'bu',
-                                allowFiltering: false,
-                                allowHeaderFiltering: false,
-                            } , 
-                            {
-                                caption: 'Lokasi',
-                                dataField: 'sector',
-                                allowFiltering: false,
-                                allowHeaderFiltering: false,
-                            } ,               
-                            {
-                                caption: 'Room',
-                                dataField: 'ghm_room_id', // Pastikan struktur data benar
-                                width: 200,
-                                lookup: {
-                                    dataSource: listOption('/list-room', 'id', 'roomName'),
-                                    valueExpr: 'id',
-                                    displayExpr: function (item) {
-                                        return item.roomName + ' | ' + item.sector +' | '+ item.bu; // Menggabungkan roomName dan sector
-                                    },
-                                },
-                                validationRules: [{ type: "required" }],
-                            },
+columns: [
+    {
+        caption: 'BU',
+        dataField: 'bu',
+        width: 150,
+        allowEditing: false, // BU tidak bisa diubah
+    },
+    {
+        caption: 'Lokasi',
+        dataField: 'sector',
+        width: 200,
+        allowEditing: false, // Sector tidak bisa diubah
+    },
+    {
+        caption: 'Room',
+        dataField: 'ghm_room_id',
+        width: 250,
+        lookup: {
+            dataSource: function (options) {
+                if (options.data && options.data.bu && options.data.sector) {
+                    return listOption('/list-room?bu=' + options.data.bu + '&sector=' + options.data.sector, 'id', 'roomName');
+                }
+                return [];
+            },
+            valueExpr: 'id',
+            displayExpr: function (item) {
+                return item ? item.roomName : "";
+            }
+        },
+        validationRules: [{ type: "required" }]
+    }
+]
