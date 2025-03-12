@@ -1,59 +1,8 @@
-onAppointmentAdding: async function (e) {
-    console.log("onAppointmentAdding triggered", e);
-    const appointmentData = e.appointmentData;
-    let scheduler = e.component;
-
-    // Hitung total tamu baru
-    let guestCount = safeArray(appointmentData.guest).length;
-    let familyCount = safeArray(appointmentData.family).length;
-    let employeeCount = safeArray(appointmentData.employee).length;
-    let totalNewGuests = guestCount + familyCount + employeeCount;
-
-    if (totalNewGuests < 1) {
-        DevExpress.ui.notify("Guest type is required", "error", 2000);
-        e.cancel = true;
-        return;
-    }
-
-    let selectedRoom = appointmentData.ghm_room_id;
-    let roomData = roomsWithLocations.find(room => room.id === selectedRoom);
-    if (!roomData) {
-        DevExpress.ui.notify("Room not Found", "error", 3000);
-        e.cancel = true;
-        return;
-    }
-
-    let sector = roomData.sector;
-    let bookingData = await loadNewData();
-
-    // Ambil kapasitas ruangan
-    let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;
-
-    // Hitung jumlah tamu, abaikan booking dengan requestStatus == 4
-    let dailyGuestCount = await getTotalGuestsPerDay(
-        bookingData.filter(b => b.requestStatus != 4), // 🔥 Abaikan booking rejected
-        selectedRoom,
-        appointmentData.startDate,
-        appointmentData.endDate
-    );
-
-    let totalGuestsAfterAdding = (dailyGuestCount || 0) + totalNewGuests;
-
-    if (totalGuestsAfterAdding > roomCapacity) {
-        e.cancel = true;
-        DevExpress.ui.notify(`Room is fully booked! (${dailyGuestCount || 0}/${roomCapacity})`, "error", 3000);
-        loadData();
-        return;
-    }
-
-    console.log("Capacity check passed. Proceeding with submission...");
-}
-
-
 onAppointmentUpdating: async function (e) {
     console.log("onAppointmentUpdating triggered", e);
     const appointmentData = e.newData;
-    const currentStatus = e.oldData.requestStatus;
+    const oldAppointmentData = e.oldData;
+    const currentStatus = oldAppointmentData.requestStatus;
 
     // Pastikan hanya booking dengan status tertentu yang bisa di-update
     if (!["0", "2"].includes(currentStatus)) {
@@ -68,14 +17,16 @@ onAppointmentUpdating: async function (e) {
     // Kapasitas ruangan
     let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;
 
-    // Hitung ulang jumlah tamu, abaikan booking yang ditolak (requestStatus == 4)
-    let dailyGuestCount = await getTotalGuestsPerDay(
-        bookingData.filter(b => b.requestStatus != 4), // 🔥 Abaikan booking rejected
-        selectedRoom,
-        appointmentData.startDate,
-        appointmentData.endDate
+    // **Filter data booking:**
+    let validBookings = bookingData.filter(b => 
+        b.requestStatus != 4 && // Abaikan booking yang ditolak
+        b.id !== oldAppointmentData.id // **Abaikan booking yang sedang diperbarui**
     );
 
+    // Hitung ulang jumlah tamu yang valid untuk hari itu
+    let dailyGuestCount = await getTotalGuestsPerDay(validBookings, selectedRoom, appointmentData.startDate, appointmentData.endDate);
+
+    // Hitung tamu baru dalam update
     let guestCount = safeArray(appointmentData.guest).length;
     let familyCount = safeArray(appointmentData.family).length;
     let employeeCount = safeArray(appointmentData.employee).length;
