@@ -3,29 +3,26 @@
     dataField: 'ghm_room_id',
     width: 200,
     lookup: {
-        dataSource: function(options) {
+        dataSource: async function(options) {
             try {
-                // Coba akses formInstance dengan cara yang lebih aman
-                let formInstance = DevExpress.ui.dxForm.getInstance($("#form-container")); 
-
+                const formInstance = $("#form-container").dxForm("instance");
                 if (!formInstance) {
-                    console.error("Form instance tidak ditemukan.");
+                    console.error("Form instance not found");
                     return [];
                 }
 
-                let formData = formInstance.option("formData") || {};
-                let currentSector = formData.sector || null;
-
+                const formData = formInstance.option("formData") || {};
+                const currentSector = formData.sector;
                 if (!currentSector) {
-                    console.warn("Sector tidak ditemukan dalam formData.");
+                    console.warn("No sector selected");
                     return [];
                 }
 
-                // Filter daftar room berdasarkan sector
-                return listOption('/list-room', 'id', 'roomName')
-                    .filter(room => room.sector === currentSector);
+                const rooms = await listOption('/list-room', 'id', 'roomName');
+                return rooms.filter(room => room.sector === currentSector);
             } catch (error) {
-                console.error("Error dalam dataSource:", error);
+                console.error("DataSource Error:", error);
+                DevExpress.ui.notify("Failed to load rooms", "error", 3000);
                 return [];
             }
         },
