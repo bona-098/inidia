@@ -1,33 +1,52 @@
+(SELECT STRING_AGG(emp.fullname, ', ')
+                FROM OPENJSON(request_ghm.employee) 
+                WITH (employee_id INT '$')
+                LEFT JOIN employee.tbl_employee AS emp
+                ON emp.id = employee_id
+                ) AS employee_fullname,
+            (SELECT STRING_AGG(value, ', ') FROM OPENJSON(request_ghm.guest)) AS guest,
+            (SELECT STRING_AGG(value, ', ') FROM OPENJSON(request_ghm.family)) AS family,
+
+
 {
-    caption: 'Room',
-    dataField: 'ghm_room_id',
-    width: 200,
-    lookup: {
-        dataSource: async function(options) {
-            try {
-                const formInstance = $("#form-container").dxForm("instance");
-                if (!formInstance) {
-                    console.error("Form instance not found");
-                    return [];
-                }
-
-                const formData = formInstance.option("formData") || {};
-                const currentSector = formData.sector;
-                if (!currentSector) {
-                    console.warn("No sector selected");
-                    return [];
-                }
-
-                const rooms = await listOption('/list-room', 'id', 'roomName');
-                return rooms.filter(room => room.sector === currentSector);
-            } catch (error) {
-                console.error("DataSource Error:", error);
-                DevExpress.ui.notify("Failed to load rooms", "error", 3000);
-                return [];
-            }
-        },
-        valueExpr: 'id',
-        displayExpr: 'roomName',
-    },
-    validationRules: [{ type: "required" }],
-}
+                                caption: 'family',
+                                dataField: 'family',
+                                allowFiltering: false,
+                                allowHeaderFiltering: false,
+                                editorOptions: { 
+                                    readOnly: true,
+                                    customConfig: function(options) {
+                                        if (options.value === null || options.value === undefined || options.value === '') {
+                                            options.text = 'tidak ada data';
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                caption: 'guest',
+                                dataField: 'guest',
+                                allowFiltering: false,
+                                allowHeaderFiltering: false,
+                                editorOptions: { 
+                                    readOnly: true,
+                                    customConfig: function(options) {
+                                        if (options.value === null || options.value === undefined || options.value === '') {
+                                            options.text = 'tidak ada data';
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                caption: 'employee',
+                                dataField: 'employee_fullname',
+                                allowFiltering: false,
+                                allowHeaderFiltering: false,
+                                editorOptions: { 
+                                    readOnly: true,
+                                    customConfig: function(options) {
+                                        if (options.value === null || options.value === undefined || options.value === '') {
+                                            options.text = 'tidak ada data';
+                                        }
+                                    }
+                                }
+                            },  
