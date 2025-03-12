@@ -1,13 +1,27 @@
+VM59:457 
+ Uncaught ReferenceError: formInstance is not defined
+    at dataSource (<anonymous>:457:63)
+    at Object.update (dx.all.js:9:2107410)
+    at Object.<anonymous> (dx.all.js:9:2096715)
+    at t.each (dx.all.js:9:151926)
+    at t.refresh (dx.all.js:9:2096592)
+    at t._loadDataSource (dx.all.js:9:2162844)
+    at t._loadDataSource (dx.all.js:9:47380)
+    at t._loadDataSource (dx.all.js:9:2457666)
+    at t._loadDataSource (dx.all.js:9:47380)
+    at t._loadDataSource (dx.all.js:9:2532146)
+﻿
 {
-    dataField: "roomName",
-    lookup: {
-        dataSource: function(options) {
-            const currentSector = formInstance.option("formData").sector; // Ambil sector user
-            return allRooms
-                .filter(room => room.sector === currentSector) // Hanya room dalam sector yang sama
-                .map(room => ({ id: room.roomName, name: room.roomName }));
-        },
-        displayExpr: "name",
-        valueExpr: "id"
-    }
-}
+                                caption: 'Room',
+                                dataField: 'ghm_room_id', // Pastikan struktur data benar
+                                width: 200,
+                                lookup: {
+                                    dataSource: listOption('/list-room','id','roomName'),  
+                                    valueExpr: 'id',
+                                    displayExpr: 'roomName',
+                                },
+                                validationRules: [{ type: "required" }],
+                                // editorOptions: {
+                                //     readOnly: true,
+                                // },
+                            },
