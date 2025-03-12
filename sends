@@ -1,39 +1,25 @@
-columns: [
-    {
-        caption: 'BU',
-        dataField: 'bu',
-        width: 150,
-        allowEditing: false, // BU tidak bisa diubah
-    },
-    {
-        caption: 'Lokasi',
-        dataField: 'sector',
-        width: 200,
-        allowEditing: false, // Sector tidak bisa diubah
-    },
-    {
-        caption: 'Room',
-        dataField: 'ghm_room_id',
-        width: 250,
-        lookup: {
-            dataSource: function (options) {
-                if (!options.data || !options.data.bu || !options.data.sector) {
-                    return [];
-                }
-                return new DevExpress.data.CustomStore({
-                    load: function () {
-                        return $.getJSON('/list-room', { 
-                            bu: options.data.bu, 
-                            sector: options.data.sector 
-                        });
-                    }
-                });
-            },
-            valueExpr: 'id',
-            displayExpr: function (item) {
-                return item ? `${item.roomName} | ${item.sector} | ${item.bu}` : "";
-            }
+{
+    caption: 'BU',
+    dataField: 'bu',
+    allowEditing: false, // BU tidak bisa diubah
+},
+{
+    caption: 'Lokasi',
+    dataField: 'sector',
+    allowEditing: false, // Sector tidak bisa diubah
+},
+{
+    caption: 'Room',
+    dataField: 'ghm_room_id',
+    width: 250,
+    lookup: {
+        dataSource: function (options) {
+            return listOption('/list-room').filter(room => 
+                room.bu === options.data.bu && room.sector === options.data.sector
+            );
         },
-        validationRules: [{ type: "required" }]
-    }
-]
+        valueExpr: 'id',
+        displayExpr: 'roomName'
+    },
+    validationRules: [{ type: "required" }]
+}
