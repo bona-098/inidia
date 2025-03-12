@@ -1,25 +1,34 @@
-VM83:174 
- Uncaught RangeError: Invalid time value
-    at Date.toISOString (<anonymous>)
-    at cellTemplate (<anonymous>:174:44)
-    at Object.render (dx.all.js:9:2140302)
-    at t._renderDelayedTemplatesCore (dx.all.js:9:2139864)
-    at t.renderDelayedTemplates (dx.all.js:9:2139359)
-    at t.renderDelayedTemplates (dx.all.js:9:2525064)
-    at t.renderDelayedTemplates (dx.all.js:9:47380)
-    at t.renderDelayedTemplates (dx.all.js:9:2399440)
-    at t.renderDelayedTemplates (dx.all.js:9:47380)
-    at t._renderCore (dx.all.js:9:2141950)
-VM83:174 
- Uncaught RangeError: Invalid time value
-    at Date.toISOString (<anonymous>)
-    at cellTemplate (<anonymous>:174:44)
-    at Object.render (dx.all.js:9:2140302)
-    at t._renderDelayedTemplatesCore (dx.all.js:9:2139864)
-    at t.renderDelayedTemplates (dx.all.js:9:2139359)
-    at t.renderDelayedTemplates (dx.all.js:9:2525064)
-    at t.renderDelayedTemplates (dx.all.js:9:47380)
-    at t.renderDelayedTemplates (dx.all.js:9:2399440)
-    at t.renderDelayedTemplates (dx.all.js:9:47380)
-    at t._renderCore (dx.all.js:9:2141950)
-﻿
+{ 
+            dataField: "startDate",
+            caption: "Check in",
+            cellTemplate: function(container, options) {
+                if (!options.value) {
+                    container.text(" ");
+                } else {
+                const date = new Date(options.value);
+                const formattedDate = date.toISOString().split('T') [0];
+                const formattedTime = date.toTimeString().split(' ') [0];
+                container.html(`
+                    <div>${formattedDate}</div>
+                    <div>${formattedTime}</div>                    
+                    `);
+                }
+            },
+        },
+        { 
+            dataField: "endDate",
+            caption: "Check out",
+            cellTemplate: function(container, options) {
+                if (!options.value) {
+                    container.text(" ");
+                } else {
+                const date = new Date(options.value);
+                const formattedDate = date.toISOString().split('T') [0];
+                const formattedTime = date.toTimeString().split(' ') [0];
+                container.html(`
+                    <div>${formattedDate}</div>
+                    <div>${formattedTime}</div>                    
+                    `);
+                }
+            },
+        },
