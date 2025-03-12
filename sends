@@ -1,11 +1,13 @@
 $data->transform(function ($item) {
-    // Jika guest bukan array, ubah dengan json_decode
-    if (!is_array($item->guest)) {
-        $item->guest = json_decode($item->guest, true) ?? [];
+    // Jika guest adalah array, ubah ke string
+    if (is_array($item->guest)) {
+        $item->guest = implode(', ', $item->guest);
     }
-    // Jika family bukan array, ubah dengan json_decode
-    if (!is_array($item->family)) {
-        $item->family = json_decode($item->family, true) ?? [];
+    
+    // Jika family adalah array, ubah ke string
+    if (is_array($item->family)) {
+        $item->family = implode(', ', $item->family);
     }
+
     return $item;
 });
