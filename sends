@@ -1,212 +1,26 @@
-onAppointmentFormOpening: function (e) {
-                    const form = e.form;
-                    const appointmentData = e.appointmentData;
-                    
-                    function validateBooking() {
-                        let selectedRoom = form.getEditor("ghm_room_id")?.option("value");                        
-                        let guestCount = (form.getEditor("guest")?.option("value") || []).length;
-                        let familyCount = (form.getEditor("family")?.option("value") || []).length;
-                        let employeeCount = (form.getEditor("employee")?.option("value") || []).length;
-                        let totalGuests = guestCount + familyCount + employeeCount;
-                        let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;       
-                        let remainingCapacity = roomCapacity - totalGuests;
-                        console.log("rc",roomCapacity);                 
-                        console.log("tg",totalGuests);                 
-                        console.log("ss",remainingCapacity);   
-                                      
-                        let doneButton = $(".dx-popup-bottom .dx-button.dx-popup-done");
-                        if (totalGuests > roomCapacity) {
-                            DevExpress.ui.notify({                           
-                                type: "error",
-                                displayTime: 3000,
-                                contentTemplate: (e) => {
-                                    e.append(`
-                                        <div style="white-space: pre-line;">
-                                        Guest limit exceeded, Please adjust your booking!\n
-                                        Jumlah tamu melebihi kapasitas, sesuaikan dengan kapasitas!\n
-                                        </div>
-                                    `);
-                                }
-                            });
-                        }
-                        return { roomCapacity, totalGuests, remainingCapacity };
-                    }
-                    console.log('Appointment Data:', appointmentData);
-                    form.option('items', [
-                        {
-                            itemType: 'group',
-                            colCount: 1,
-                            caption: 'Interests',
-                            items: [
-                                {
-                                    label: { text: 'Code' },
-                                    dataField: 'code',
-                                    editorOptions: {
-                                        readOnly: true,
-                                        value: appointmentData.code || ''
-                                    }
-                                },
-                                {
-                                    label: { text: 'Purpose' },
-                                    editorType: 'dxTextBox',
-                                    dataField: 'text',
-                                    editorOptions: {
-                                        value: appointmentData.text || ''
-                                    },
-                                    validationRules: [{ type: "required", message: 'Purpose is required', }],
-                                },
-                                {
-                                    label: { text: 'Details' },
-                                    editorType: 'dxTextArea',
-                                    dataField: 'description',
-                                    editorOptions: {
-                                        value: appointmentData.description || ''
-                                    },
-                                    validationRules: [{ type: "required", message: 'Details is required', }],
-                                }
-                            ]
-                        },
-                        {
-                            itemType: 'group',
-                            caption: 'Room & Date',
-                            items: [
-                                {
-                                    label: { text: 'Room' },
-                                    editorType: 'dxSelectBox',
-                                    dataField: 'ghm_room_id',
-                                    helpText: `Occupancy: ${roomCapacity} | Booked: ${totalGuests} | Remaining: ${remainingCapacity}`,
-                                    editorOptions: {
-                                        readOnly: true,
-                                        dataSource: roomsWithLocations,
-                                        displayExpr: function (item) {
-                                            if (!item) return "";
-                                            return `${item.location} | ${item.text}`;
-                                        },
-                                        valueExpr: 'id',
-                                        value: appointmentData.ghm_room_id || null,
-                                        onValueChanged: validateBooking()
-                                    }
-                                },
-                                {
-                                    label: { text: 'Start Date' },
-                                    editorType: 'dxDateBox',
-                                    dataField: 'startDate',
-                                    editorOptions: {
-                                        type: 'datetime',
-                                        value: appointmentData.startDate,
-                                        displayFormat: 'dd-MM-yyyy HH:mm:ss',
-                                        dateSerializationFormat: 'yyyy-MM-ddTHH:mm:ssZ'
-                                    },
-                                    validationRules: [{ type: "required", message: 'startDate is required' }],
-                                },
-                                {
-                                    label: { text: 'End Date' },
-                                    editorType: 'dxDateBox',
-                                    dataField: 'endDate',
-                                    editorOptions: {
-                                        type: 'datetime',
-                                        value: appointmentData.endDate,
-                                        displayFormat: 'dd-MM-yyyy HH:mm:ss',
-                                        dateSerializationFormat: 'yyyy-MM-ddTHH:mm:ssZ'
-                                    },
-                                    validationRules: [{ type: "required", message: 'endDate is required' }],
-                                },
-                                {
-                                    label: { text: 'Status' },
-                                    editorType: 'dxSelectBox',
-                                    dataField: 'requestStatus',
-                                    editorOptions: {
-                                        readOnly: true,
-                                        dataSource: [
-                                            { id: "0", text: "Draft" },
-                                            { id: "1", text: "Waiting Approval" },
-                                            { id: "2", text: "Rework" },
-                                            { id: "3", text: "Approved" },
-                                            { id: "4", text: "Rejected" }
-                                        ],
-                                        displayExpr: "text",
-                                        valueExpr: "id",
-                                        value: String(appointmentData.requestStatus || "0") // Pastikan selalu dalam string
-                                    }
-                                }
-                            ]
-                        },
-                        {
-                            itemType: 'group',
-                            colSpan: 2,
-                            caption: 'Guest Type',
-                            items: [
-                                {
-                                    title: 'Employee',
-                                    label: { text: 'Employee' },
-                                    editorType: 'dxTagBox',
-                                    dataField: 'employee',
-                                    editorOptions: {
-                                        dataSource: emplo,
-                                        displayExpr: function (item) {
-                                            if (!item) return "";
-                                            const department = departments.find(dept => dept.id === item.department_id);
-                                            return `${item.FullName} | ${item.SAPID} | ${department ? department.DepartmentName : "Failed"}`;
-                                        },
-                                        valueExpr: 'id',
-                                        value: Array.isArray(appointmentData.employee) ? appointmentData.employee : [],
-                                        showSelectionControls: true,
-                                        applyValueMode: 'useButtons',
-                                        searchEnabled: true,
-                                        onValueChanged: validateBooking
-                                    }
-                                },
-                                {
-                                    title: 'Guest',
-                                    editorType: 'dxTagBox',
-                                    dataField: 'guest',
-                                    editorOptions: {
-                                        dataSource: [],
-                                        value: Array.isArray(appointmentData.guest) ? appointmentData.guest : [],
-                                        acceptCustomValue: true,
-                                        searchEnabled: true,
-                                        showSelectionControls: true,
-                                        applyValueMode: 'useButtons',
-                                        onCustomItemCreating: function (args) {
-                                            let newValue = args.text;
-                                            let guests = form.option('formData').guest || [];
-                                            if (!guests.includes(newValue)) {
-                                                guests.push(newValue);
-                                                args.customItem = newValue;
-                                            } else {
-                                                args.customItem = null;
-                                            }
-                                            form.updateData('guest', guests);
-                                            validateBooking();
-                                        }
-                                    }
-                                },
-                                {
-                                    title: 'Family',
-                                    editorType: 'dxTagBox',
-                                    dataField: 'family',
-                                    editorOptions: {
-                                        dataSource: [],
-                                        value: Array.isArray(appointmentData.family) ? appointmentData.family : [],
-                                        acceptCustomValue: true,
-                                        searchEnabled: true,
-                                        showSelectionControls: true,
-                                        applyValueMode: 'useButtons',
-                                        onCustomItemCreating: function (args) {
-                                            let newValue = args.text;
-                                            let familys = form.option('formData').family || [];
-                                            if (!familys.includes(newValue)) {
-                                                familys.push(newValue);
-                                                args.customItem = newValue;
-                                            } else {
-                                                args.customItem = null;
-                                            }
-                                            form.updateData('family', familys);
-                                            validateBooking();
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    ]);
-                },
+const { roomCapacity, totalGuests, remainingCapacity } = validateBooking();
+
+form.option('items', [
+    {
+        label: { text: 'Room' },
+        editorType: 'dxSelectBox',
+        dataField: 'ghm_room_id',
+        helpText: `Occupancy: ${roomCapacity} | Booked: ${totalGuests} | Remaining: ${remainingCapacity}`,
+        editorOptions: {
+            readOnly: true,
+            dataSource: roomsWithLocations,
+            displayExpr: function (item) {
+                if (!item) return "";
+                return `${item.location} | ${item.text}`;
+            },
+            valueExpr: 'id',
+            value: appointmentData.ghm_room_id || null,
+            onValueChanged: function () {
+                const { roomCapacity, totalGuests, remainingCapacity } = validateBooking();
+                form.getEditor("ghm_room_id").option("helpText", 
+                    `Occupancy: ${roomCapacity} | Booked: ${totalGuests} | Remaining: ${remainingCapacity}`
+                );
+            }
+        }
+    }
+]);
