@@ -1,5 +1,3 @@
-helpText: `Occupancy: ${roomCapacity} | Booked: ${totalGuests} | Remaining: ${remainingCapacity}`,
-
 onAppointmentFormOpening: function (e) {
     const form = e.form;
 
@@ -17,32 +15,17 @@ onAppointmentFormOpening: function (e) {
         console.log("Total Guests:", totalGuests);                 
         console.log("Remaining Capacity:", remainingCapacity); 
 
-        // Update helpText dengan hasil validasi
-        form.getEditor("ghm_room_id")?.option("helpText", 
-            `Occupancy: ${roomCapacity} | Booked: ${totalGuests} | Remaining: ${remainingCapacity}`);
-
-        if (totalGuests > roomCapacity) {
-            DevExpress.ui.notify({                           
-                type: "error",
-                displayTime: 3000,
-                contentTemplate: (e) => {
-                    e.append(`
-                        <div style="white-space: pre-line;">
-                        Guest limit exceeded, Please adjust your booking!\n
-                        Jumlah tamu melebihi kapasitas, sesuaikan dengan kapasitas!\n
-                        </div>
-                    `);
-                }
-            });
-        }
+        return { roomCapacity, totalGuests, remainingCapacity };
     }
+
+    let { roomCapacity, totalGuests, remainingCapacity } = validateBooking();
 
     form.option('items', [
         {
             label: { text: 'Room' },
             editorType: 'dxSelectBox',
             dataField: 'ghm_room_id',
-            helpText: "Loading...",
+            helpText: `Occupancy: ${roomCapacity} | Booked: ${totalGuests} | Remaining: ${remainingCapacity}`,
             editorOptions: {
                 readOnly: false,
                 dataSource: roomsWithLocations,
@@ -53,7 +36,9 @@ onAppointmentFormOpening: function (e) {
                 valueExpr: 'id',
                 value: null,
                 onValueChanged: function () {
-                    validateBooking(); // Panggil validasi setelah memilih kamar
+                    let updatedData = validateBooking();
+                    form.itemOption("ghm_room_id", "helpText", 
+                        `Occupancy: ${updatedData.roomCapacity} | Booked: ${updatedData.totalGuests} | Remaining: ${updatedData.remainingCapacity}`);
                 }
             }
         }
