@@ -1,26 +1,34 @@
-const { roomCapacity, totalGuests, remainingCapacity } = validateBooking();
+onAppointmentFormOpening: function (e) {
+    const form = e.form;
+    const appointmentData = e.appointmentData || {}; // Pastikan tidak null
 
-form.option('items', [
-    {
-        label: { text: 'Room' },
-        editorType: 'dxSelectBox',
-        dataField: 'ghm_room_id',
-        helpText: `Occupancy: ${roomCapacity} | Booked: ${totalGuests} | Remaining: ${remainingCapacity}`,
-        editorOptions: {
-            readOnly: true,
-            dataSource: roomsWithLocations,
-            displayExpr: function (item) {
-                if (!item) return "";
-                return `${item.location} | ${item.text}`;
-            },
-            valueExpr: 'id',
-            value: appointmentData.ghm_room_id || null,
-            onValueChanged: function () {
-                const { roomCapacity, totalGuests, remainingCapacity } = validateBooking();
-                form.getEditor("ghm_room_id").option("helpText", 
-                    `Occupancy: ${roomCapacity} | Booked: ${totalGuests} | Remaining: ${remainingCapacity}`
-                );
+    let selectedRoom = appointmentData.ghm_room_id || null;
+
+    // Ambil room dari roomsWithLocations
+    let room = roomsWithLocations?.find(room => room.id === selectedRoom) || {};
+
+    // Ambil totalPeople dari booking berdasarkan room_id
+    let totalBooked = booking?.find(b => b.room_id === selectedRoom)?.totalPeople || 0;
+
+    console.log("Selected Room ID:", selectedRoom);
+    console.log("Total Booked from Booking:", totalBooked);
+
+    form.option('items', [
+        {
+            label: { text: 'Room' },
+            editorType: 'dxSelectBox',
+            dataField: 'ghm_room_id',
+            helpText: `Total Booked: ${totalBooked}`,
+            editorOptions: {
+                readOnly: true,
+                dataSource: roomsWithLocations,
+                displayExpr: function (item) {
+                    if (!item) return "";
+                    return `${item.location} | ${item.text}`;
+                },
+                valueExpr: 'id',
+                value: selectedRoom
             }
         }
-    }
-]);
+    ]);
+}
