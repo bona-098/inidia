@@ -1,3 +1,5 @@
+helpText: `Occupancy: ${roomCapacity} | Booked: ${totalGuests} | Remaining: ${remainingCapacity}`,
+
 onAppointmentFormOpening: function (e) {
     const form = e.form;
 
