@@ -1,23 +1,52 @@
-editorOptions: {
-    readOnly: false, // Agar user bisa memilih kamar
-    dataSource: roomsWithLocations,
-    displayExpr: function (item) {
-        if (!item) return "";
-        return `${item.location} | ${item.text}`;
-    },
-    valueExpr: 'id',
-    value: appointmentData.ghm_room_id || null,
-    onValueChanged: function (args) {
-        let selectedRoom = roomsWithLocations.find(room => room.id === args.value);
-        let roomCapacity = selectedRoom?.roomOccupancy || 0;
-        let totalGuests = (form.getEditor("guest")?.option("value") || []).length +
-                          (form.getEditor("family")?.option("value") || []).length +
-                          (form.getEditor("employee")?.option("value") || []).length;
-        let remainingCapacity = roomCapacity - totalGuests;
-
-        form.getEditor("ghm_room_id").option("helpText", 
-            `Occupancy: ${roomCapacity} | Booked: ${totalGuests} | Remaining: ${remainingCapacity}`);
-        
-        validateBooking(); // Validasi ulang setelah kamar dipilih
-    }
-}
+onAppointmentFormOpening: function (e) {
+                    const form = e.form;
+                    const appointmentData = e.appointmentData;
+                    
+                    function validateBooking() {
+                        let selectedRoom = form.getEditor("ghm_room_id")?.option("value");                        
+                        let guestCount = (form.getEditor("guest")?.option("value") || []).length;
+                        let familyCount = (form.getEditor("family")?.option("value") || []).length;
+                        let employeeCount = (form.getEditor("employee")?.option("value") || []).length;
+                        let totalGuests = guestCount + familyCount + employeeCount;
+                        let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;       
+                        let remainingCapacity = roomCapacity - totalGuests;
+                        console.log("rc",roomCapacity);                 
+                        console.log("tg",totalGuests);                 
+                        console.log("ss",remainingCapacity);                 
+                        let doneButton = $(".dx-popup-bottom .dx-button.dx-popup-done");
+                        if (totalGuests > roomCapacity) {
+                            DevExpress.ui.notify({                           
+                                type: "error",
+                                displayTime: 3000,
+                                contentTemplate: (e) => {
+                                    e.append(`
+                                        <div style="white-space: pre-line;">
+                                        Guest limit exceeded, Please adjust your booking!\n
+                                        Jumlah tamu melebihi kapasitas, sesuaikan dengan kapasitas!\n
+                                        </div>
+                                    `);
+                                }
+                            });
+                        }
+                    }
+                    console.log('Appointment Data:', appointmentData);
+                    form.option('items', [
+{
+                                    label: { text: 'Room' },
+                                    editorType: 'dxSelectBox',
+                                    dataField: 'ghm_room_id',
+                                    helpText: `Occupancy: ${appointmentData?.roomCapacity ?? 0} | 
+                                                Booked: ${appointmentData?.totalGuests ?? 0} | 
+                                                Remaining: ${appointmentData?.remainingCapacity ?? 0}`,
+                                    editorOptions: {
+                                        readOnly: true,
+                                        dataSource: roomsWithLocations,
+                                        displayExpr: function (item) {
+                                            if (!item) return "";
+                                            return `${item.location} | ${item.text}`;
+                                        },
+                                        valueExpr: 'id',
+                                        value: appointmentData.ghm_room_id || null,
+                                        onValueChanged: validateBooking()
+                                    }
+                                },
