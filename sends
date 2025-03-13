@@ -1,17 +1,19 @@
 onAppointmentFormOpening: function (e) {
     const form = e.form;
-    const appointmentData = e.appointmentData || {}; // Pastikan tidak null
+    const appointmentData = e.appointmentData;
 
-    let selectedRoom = appointmentData.ghm_room_id || null;
+    function validateBooking() {
+        let selectedRoom = form.getEditor("ghm_room_id")?.option("value");  
+        
+        // Ambil totalPeople dari data booking berdasarkan room_id yang dipilih
+        let totalBooked = booking?.find(b => b.room_id === selectedRoom)?.totalPeople || 0;
 
-    // Ambil room dari roomsWithLocations
-    let room = roomsWithLocations?.find(room => room.id === selectedRoom) || {};
+        console.log("Total Booked:", totalBooked);
+        
+        return { totalBooked };
+    }
 
-    // Ambil totalPeople dari booking berdasarkan room_id
-    let totalBooked = booking?.find(b => b.room_id === selectedRoom)?.totalPeople || 0;
-
-    console.log("Selected Room ID:", selectedRoom);
-    console.log("Total Booked from Booking:", totalBooked);
+    let { totalBooked } = validateBooking();
 
     form.option('items', [
         {
@@ -27,7 +29,11 @@ onAppointmentFormOpening: function (e) {
                     return `${item.location} | ${item.text}`;
                 },
                 valueExpr: 'id',
-                value: selectedRoom
+                value: appointmentData.ghm_room_id || null,
+                onValueChanged: function () {
+                    let { totalBooked } = validateBooking();
+                    form.getEditor("ghm_room_id").option("helpText", `Total Booked: ${totalBooked}`);
+                }
             }
         }
     ]);
