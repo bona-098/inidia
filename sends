@@ -1,4 +1,62 @@
+console.log("booking", booking);
+                    console.log("totalPeople", totalPeople);
+
 Solusi Perbaikan:
+bu
+: 
+"AHL"
+code
+: 
+"Ghm/2025/03/0316"
+creator
+: 
+"Strategic Planning Admin"
+description
+: 
+"oo"
+employee
+: 
+[]
+endDate
+: 
+"2025-03-06T22:00:00+08:00"
+family
+: 
+[]
+ghm_room_id
+: 
+2
+guest
+: 
+['oo']
+id
+: 
+460
+location
+: 
+"Balikpapan"
+requestColor
+: 
+"#6C757D"
+requestStatus
+: 
+"0"
+roomName
+: 
+"Kamar 2 "
+sector
+: 
+"HO"
+startDate
+: 
+"2025-03-06T10:00:00+08:00"
+text
+: 
+"oo"
+totalPeople
+: 
+"1"
+Uncaught ReferenceError: totalPeople is not defined
 1. **Modifikasi Fungsi validateBooking():
 javascript
 Copy
