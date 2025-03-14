@@ -1,229 +1,194 @@
-// Helper function untuk mendapatkan awal dan akhir hari
-function getDayRange(date) {
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
-    return { startOfDay, endOfDay };
-}
+function onAppointmentFormOpening(e) {
+    const form = e.form;
+    const appointmentData = e.appointmentData;
+    const isNewAppointment = e.appointmentData.id === undefined;
 
-// Fungsi utama untuk menghitung totalPeople per hari
-async function getDailyGuestsForSameDay(appointments, roomId, targetDate) {
-    const { startOfDay, endOfDay } = getDayRange(targetDate);
-    let dailyCount = 0;
-    
-    appointments.forEach(appointment => {
-        if (appointment.requestStatus === 4) return; // Skip rejected
-        
-        const apptStart = new Date(appointment.startDate);
-        const apptEnd = new Date(appointment.endDate);
-        
-        // Cek 3 kondisi:
-        // 1. Room ID sama
-        // 2. Ada overlap dengan hari target
-        // 3. Status bukan rejected
-        if (appointment.ghm_room_id === roomId && 
-            apptStart <= endOfDay && 
-            apptEnd >= startOfDay) {
-            dailyCount += parseInt(appointment.totalPeople) || 0;
+    // Helper functions
+    const getDayRange = (date) => {
+        const start = new Date(date);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(date);
+        end.setHours(23, 59, 59, 999);
+        return { start, end };
+    };
+
+    const safeParseInt = (value) => {
+        return parseInt(value?.toString()?.replace(/\D/g, '')) || 0;
+    };
+
+    // Fungsi validasi utama
+    const validateRoomCapacity = async (selectedRoom, startDate, endDate, newGuests) => {
+        const room = roomsWithLocations.find(r => r.id === selectedRoom);
+        if (!room) return { isValid: false, message: 'Room not found' };
+
+        try {
+            const existingBookings = await loadExistingBookings(); // Fungsi load data booking
+            let currentDate = new Date(startDate);
+            const lastDate = new Date(endDate);
+            const roomCapacity = room.roomOccupancy;
+
+            while (currentDate <= lastDate) {
+                const dailyGuests = existingBookings
+                    .filter(b => 
+                        b.ghm_room_id === selectedRoom &&
+                        new Date(b.startDate) <= getDayRange(currentDate).end &&
+                        new Date(b.endDate) >= getDayRange(currentDate).start &&
+                        b.requestStatus !== 4 // Exclude rejected
+                    )
+                    .reduce((sum, b) => sum + safeParseInt(b.totalPeople), 0);
+
+                const total = dailyGuests + newGuests;
+                
+                console.log(`Date: ${currentDate.toISOString().split('T')[0]}`, {
+                    existing: dailyGuests,
+                    new: newGuests,
+                    capacity: roomCapacity
+                });
+
+                if (total > roomCapacity) {
+                    return {
+                        isValid: false,
+                        message: `Melebihi kapasitas pada ${currentDate.toLocaleDateString()}! 
+                        (Kapasitas: ${roomCapacity}, Terisi: ${dailyGuests}, Tambahan: ${newGuests})`
+                    };
+                }
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            return { isValid: true };
+        } catch (error) {
+            console.error('Validation error:', error);
+            return { isValid: false, message: 'Error validating capacity' };
+        }
+    };
+
+    // Update form items
+    form.option('items', [{
+        itemType: 'group',
+        colCount: 2,
+        items: [
+            {
+                dataField: 'text',
+                label: { text: 'Purpose' },
+                editorType: 'dxTextBox',
+                validationRules: [{ type: "required" }]
+            },
+            {
+                dataField: 'ghm_room_id',
+                label: { text: 'Room' },
+                editorType: 'dxSelectBox',
+                editorOptions: {
+                    dataSource: roomsWithLocations,
+                    displayExpr: 'text',
+                    valueExpr: 'id',
+                    onValueChanged: async (e) => {
+                        const validation = await validateRoomCapacity(
+                            e.value,
+                            new Date(appointmentData.startDate),
+                            new Date(appointmentData.endDate),
+                            safeParseInt(appointmentData.totalPeople)
+                        );
+                        
+                        if (!validation.isValid) {
+                            DevExpress.ui.notify({
+                                message: validation.message,
+                                type: 'error',
+                                displayTime: 5000
+                            });
+                        }
+                    }
+                }
+            },
+            {
+                dataField: 'startDate',
+                label: { text: 'Start Date' },
+                editorType: 'dxDateBox',
+                editorOptions: {
+                    type: 'datetime',
+                    onValueChanged: async (e) => {
+                        const validation = await validateRoomCapacity(
+                            appointmentData.ghm_room_id,
+                            e.value,
+                            new Date(appointmentData.endDate)),
+                            safeParseInt(appointmentData.totalPeople)
+                        );
+                        
+                        form.getEditor('ghm_room_id').option('helpText', 
+                            validation.isValid ? '✅ Valid' : `❌ ${validation.message}`);
+                    }
+                }
+            },
+            {
+                dataField: 'endDate',
+                label: { text: 'End Date' },
+                editorType: 'dxDateBox',
+                editorOptions: {
+                    type: 'datetime',
+                    onValueChanged: async (e) => {
+                        const validation = await validateRoomCapacity(
+                            appointmentData.ghm_room_id,
+                            new Date(appointmentData.startDate),
+                            e.value,
+                            safeParseInt(appointmentData.totalPeople)
+                        );
+                        
+                        form.getEditor('ghm_room_id').option('helpText', 
+                            validation.isValid ? '✅ Valid' : `❌ ${validation.message}`);
+                    }
+                }
+            },
+            {
+                itemType: 'group',
+                caption: 'Participants',
+                items: [
+                    {
+                        dataField: 'employee',
+                        editorType: 'dxTagBox',
+                        editorOptions: {
+                            dataSource: employees,
+                            displayExpr: 'FullName',
+                            valueExpr: 'id',
+                            searchEnabled: true
+                        }
+                    },
+                    {
+                        dataField: 'guest',
+                        editorType: 'dxTagBox',
+                        editorOptions: {
+                            items: [],
+                            acceptCustomValue: true,
+                            onCustomItemCreating: (e) => {
+                                if (!e.text) return;
+                                const newItems = [...(appointmentData.guest || []), e.text];
+                                appointmentData.guest = [...new Set(newItems)];
+                            }
+                        }
+                    }
+                ]
+            }
+        ]
+    }]);
+
+    // Custom validation sebelum submit
+    form.option('validationGroup').validate().then((result) => {
+        if (result.isValid) {
+            const totalPeople = (appointmentData.employee?.length || 0) + 
+                              (appointmentData.guest?.length || 0);
+            
+            validateRoomCapacity(
+                appointmentData.ghm_room_id,
+                new Date(appointmentData.startDate),
+                new Date(appointmentData.endDate)),
+                totalPeople
+            ).then(validationResult => {
+                if (!validationResult.isValid) {
+                    form.option('validationGroup')._validationControls[0]._setValidationStatus('invalid');
+                    DevExpress.ui.notify({
+                        message: validationResult.message,
+                        type: 'error',
+                        displayTime: 5000
+                    });
+                }
+            });
         }
     });
-    
-    console.log(`Daily count for ${targetDate.toDateString()}:`, dailyCount);
-    return dailyCount;
 }
-
-// Modifikasi fungsi validasi
-async function validateRoomCapacity(selectedRoom, startDate, endDate, newGuests) {
-    const roomData = roomsWithLocations.find(room => room.id === selectedRoom);
-    if (!roomData) return false;
-
-    const roomCapacity = roomData.roomOccupancy;
-    const existingBookings = await loadExistingBookings(); // Fungsi untuk load data booking
-    
-    let currentDate = new Date(startDate);
-    const lastDate = new Date(endDate);
-    
-    while (currentDate <= lastDate) {
-        const dailyGuests = await getDailyGuestsForSameDay(
-            existingBookings, 
-            selectedRoom, 
-            currentDate
-        );
-        
-        if (dailyGuests + newGuests > roomCapacity) {
-            console.error(`Over capacity on ${currentDate.toDateString()}!`);
-            return false;
-        }
-        
-        currentDate.setDate(currentDate.getDate() + 1); // Next day
-    }
-    
-    return true;
-}
-
-// Contoh implementasi di event handler
-onAppointmentAdding: async function(e) {
-    const appointment = e.appointmentData;
-    const newGuests = appointment.guest.length + appointment.family.length + appointment.employee.length;
-    
-    const isValid = await validateRoomCapacity(
-        appointment.ghm_room_id,
-        new Date(appointment.startDate),
-        new Date(appointment.endDate)),
-        newGuests
-    );
-    
-    if (!isValid) {
-        Swal.fire('Error!', 'Melebihi kapasitas harian untuk kamar ini', 'error');
-        e.cancel = true;
-    }
-}
-
-console.log("booking", booking);
-                    console.log("totalPeople", totalPeople);
-
-Solusi Perbaikan:
-bu
-: 
-"AHL"
-code
-: 
-"Ghm/2025/03/0316"
-creator
-: 
-"Strategic Planning Admin"
-description
-: 
-"oo"
-employee
-: 
-[]
-endDate
-: 
-"2025-03-06T22:00:00+08:00"
-family
-: 
-[]
-ghm_room_id
-: 
-2
-guest
-: 
-['oo']
-id
-: 
-460
-location
-: 
-"Balikpapan"
-requestColor
-: 
-"#6C757D"
-requestStatus
-: 
-"0"
-roomName
-: 
-"Kamar 2 "
-sector
-: 
-"HO"
-startDate
-: 
-"2025-03-06T10:00:00+08:00"
-text
-: 
-"oo"
-totalPeople
-: 
-"1"
-Uncaught ReferenceError: totalPeople is not defined
-1. **Modifikasi Fungsi validateBooking():
-javascript
-Copy
-function validateBooking() {
-  const selectedRoom = form.getEditor("ghm_room_id")?.option("value");
-  const currentBooking = bookingData.find(b => b.id === appointmentData.id);
-  
-  // Ambil totalPeople langsung dari data booking
-  const totalGuests = currentBooking?.totalPeople || 0;
-  
-  const roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;
-  const remainingCapacity = roomCapacity - totalGuests;
-
-  // Update help text
-  form.getEditor("ghm_room_id").option("helpText", 
-    `Occupancy: ${roomCapacity} | Booked: ${totalGuests} | Remaining: ${remainingCapacity}`);
-  
-  return { roomCapacity, totalGuests, remainingCapacity };
-}
-2. **Update Bagian appointmentTooltipTemplate:
-javascript
-Copy
-appointmentTooltipTemplate: function (model) {
-  const booking = model.appointmentData;
-  const room = roomsWithLocations.find(room => room.id === booking.ghm_room_id);
-  const roomOccupancy = room?.roomOccupancy || 0;
-  
-  // Gunakan totalPeople langsung dari data booking
-  const totalPeople = booking.totalPeople || 0; 
-  const remainingCapacity = roomOccupancy - totalPeople;
-
-  // ... bagian kode lainnya tetap sama ...
-  const tooltipHtml = `
-    <div>
-      <b>Purpose:</b> ${booking.text || "No Title"}<br>
-      ${formatDate(booking.startDate)} - ${formatDate(booking.endDate)}<br>
-      <b>Occupancy:</b> ${roomOccupancy}<br>
-      <b>Booked:</b> ${totalPeople}  // 👈 Pakai totalPeople dari backend
-      <b>Remaining:</b> ${remainingCapacity}<br>
-      <!-- ... -->
-    </div>`;
-  return tooltipHtml;
-}
-3. **Modifikasi Fungsi getTotalGuestsPerDay():
-javascript
-Copy
-async function getTotalGuestsPerDay(appointments, roomId, startDate, endDate) {
-  let dailyGuestCount = 0;
-  
-  appointments.forEach(appointment => {
-    if (appointment.requestStatus == 4) return;
-    
-    const isSameRoom = appointment.ghm_room_id === roomId;
-    const isInDateRange = (
-      new Date(appointment.startDate) <= endDate && 
-      new Date(appointment.endDate) >= startDate
-    );
-    
-    if (isSameRoom && isInDateRange) {
-      // Gunakan totalPeople langsung dari data
-      dailyGuestCount += appointment.totalPeople || 0;
-    }
-  });
-  
-  return dailyGuestCount;
-}
-Penjelasan Perubahan:
-Langsung Menggunakan totalPeople - Tidak perlu menghitung manual karena data sudah valid dari backend
-
-Konsistensi Data - Selalu menggunakan sumber data yang sama (backend) untuk semua tampilan
-
-Optimasi Performa - Mengurangi komputasi klien dengan memanfaatkan data yang sudah diproses server
-
-Verifikasi:
-Pastikan response API di loadData() mengandung field totalPeople
-
-Cek di console log untuk memastikan data yang diterima sudah benar:
-
-javascript
-Copy
-console.log("Booking Data:", booking);
-Jika implementasi ini masih tidak bekerja, perlu dicek:
-
-Apakah backend benar-benar mengirim field totalPeople
-
-Apakah format data sesuai (harus number)
-
-Apakah ada caching data yang menyebabkan data tidak terupdate
