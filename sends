@@ -1,3 +1,4 @@
+The monitoring of HR Service Care performance faces several key challenges, including low efficiency due to time-consuming manual processes, scattered data without clear integration, and difficulties in identifying weaknesses in HR services. Additionally, a lack of transparency in performance evaluation often leads to decision-making based on intuition rather than accurate data. Measuring employee satisfaction with HR services is also challenging, along with poorly structured report documentation, which hinders continuous quality improvement.
 "Optimizing HR Services with HRSC Report: A Data-Driven Innovation"
 function onAppointmentFormOpening(e) {
     const form = e.form;
