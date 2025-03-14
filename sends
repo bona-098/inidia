@@ -1,3 +1,85 @@
+// Helper function untuk mendapatkan awal dan akhir hari
+function getDayRange(date) {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+    return { startOfDay, endOfDay };
+}
+
+// Fungsi utama untuk menghitung totalPeople per hari
+async function getDailyGuestsForSameDay(appointments, roomId, targetDate) {
+    const { startOfDay, endOfDay } = getDayRange(targetDate);
+    let dailyCount = 0;
+    
+    appointments.forEach(appointment => {
+        if (appointment.requestStatus === 4) return; // Skip rejected
+        
+        const apptStart = new Date(appointment.startDate);
+        const apptEnd = new Date(appointment.endDate);
+        
+        // Cek 3 kondisi:
+        // 1. Room ID sama
+        // 2. Ada overlap dengan hari target
+        // 3. Status bukan rejected
+        if (appointment.ghm_room_id === roomId && 
+            apptStart <= endOfDay && 
+            apptEnd >= startOfDay) {
+            dailyCount += parseInt(appointment.totalPeople) || 0;
+        }
+    });
+    
+    console.log(`Daily count for ${targetDate.toDateString()}:`, dailyCount);
+    return dailyCount;
+}
+
+// Modifikasi fungsi validasi
+async function validateRoomCapacity(selectedRoom, startDate, endDate, newGuests) {
+    const roomData = roomsWithLocations.find(room => room.id === selectedRoom);
+    if (!roomData) return false;
+
+    const roomCapacity = roomData.roomOccupancy;
+    const existingBookings = await loadExistingBookings(); // Fungsi untuk load data booking
+    
+    let currentDate = new Date(startDate);
+    const lastDate = new Date(endDate);
+    
+    while (currentDate <= lastDate) {
+        const dailyGuests = await getDailyGuestsForSameDay(
+            existingBookings, 
+            selectedRoom, 
+            currentDate
+        );
+        
+        if (dailyGuests + newGuests > roomCapacity) {
+            console.error(`Over capacity on ${currentDate.toDateString()}!`);
+            return false;
+        }
+        
+        currentDate.setDate(currentDate.getDate() + 1); // Next day
+    }
+    
+    return true;
+}
+
+// Contoh implementasi di event handler
+onAppointmentAdding: async function(e) {
+    const appointment = e.appointmentData;
+    const newGuests = appointment.guest.length + appointment.family.length + appointment.employee.length;
+    
+    const isValid = await validateRoomCapacity(
+        appointment.ghm_room_id,
+        new Date(appointment.startDate),
+        new Date(appointment.endDate)),
+        newGuests
+    );
+    
+    if (!isValid) {
+        Swal.fire('Error!', 'Melebihi kapasitas harian untuk kamar ini', 'error');
+        e.cancel = true;
+    }
+}
+
 console.log("booking", booking);
                     console.log("totalPeople", totalPeople);
 
