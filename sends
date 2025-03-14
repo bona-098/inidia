@@ -8,7 +8,12 @@ One of the main challenges in the monitoring process is the difficulty in tracki
 
 ID:
 Salah satu tantangan utama dalam proses monitoring adalah sulitnya melacak riwayat pengajuan sebuah sistem dari awal hingga selesai. Tanpa sistem yang terpusat dan terstruktur, data sering tersebar sehingga sulit diakses secara real-time. Hal ini menyebabkan keterlambatan dalam pengambilan keputusan, kesulitan dalam mengidentifikasi hambatan, serta ketidakefisienan dalam manajemen alur kerja. Selain itu, pelacakan manual meningkatkan risiko kesalahan, inkonsistensi, dan pekerjaan yang berulang, yang semakin memperlambat operasional.
+perbaikan yang dibuat
+EN:
+To address these challenges, a structured historical data table was implemented to provide real-time tracking of each request from submission to completion. This improvement allows users to monitor the status of requests easily, track processing time, and identify potential delays in the workflow. By centralizing all request-related data, the system eliminates the need for manual tracking and scattered documentation. Additionally, automated notifications and real-time updates help teams respond more efficiently, ensuring a smoother and faster monitoring process.
 
+ID:
+Untuk mengatasi tantangan tersebut, diterapkan tabel data historis yang terstruktur guna menyediakan pemantauan real-time terhadap setiap pengajuan dari awal hingga selesai. Perbaikan ini memungkinkan pengguna untuk dengan mudah memantau status permintaan, melacak waktu pemrosesan, dan mengidentifikasi potensi keterlambatan dalam alur kerja. Dengan menyatukan semua data terkait pengajuan dalam satu sistem, kebutuhan akan pelacakan manual dan dokumentasi yang tersebar dapat dihilangkan. Selain itu, pemberitahuan otomatis dan pembaruan real-time membantu tim merespons lebih cepat, memastikan proses monitoring berjalan lebih lancar dan efisien.
 Benefits / Manfaat:
 EN:
 By implementing a system that presents detailed historical data in a structured table, the monitoring process becomes more efficient. Users can quickly access key information such as submission time, progress updates, and completion status. This structured visualization helps teams identify delays, optimize response times, and improve overall service efficiency. Additionally, real-time data access enhances decision-making and allows for proactive issue resolution before they escalate.
