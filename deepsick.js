@@ -5,9 +5,11 @@ $requests = Ghm::query()
             $query->where("request_ghm.user_id", "!=", $userId)
                 ->whereIn("request_ghm.requestStatus", [1, 3, 4]);
         } elseif ($gethrsl) {
-            // HR Service Leader bisa melihat request miliknya sendiri dan request orang lain dengan status 1,2,3,4
-            $query->whereIn("request_ghm.requestStatus", [1, 2, 3, 4])
-                  ->orWhere("request_ghm.user_id", "=", $userId);
+            // HRSL bisa melihat request miliknya sendiri + request orang lain dengan status 1,2,3,4
+            $query->where(function ($q) use ($userId) {
+                $q->where("request_ghm.user_id", "=", $userId)
+                  ->orWhereIn("request_ghm.requestStatus", [1, 2, 3, 4]);
+            });
         } else {
             // User biasa hanya bisa melihat request miliknya sendiri
             $query->where("request_ghm.user_id", "=", $userId);
