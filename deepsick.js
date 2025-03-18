@@ -1,19 +1,21 @@
 onAppointmentFormOpening: function (e) {
     const form = e.form;
     const appointmentData = e.appointmentData;
-
     let selectedRoom = appointmentData.ghm_room_id || null;
-    let newStartDate = new Date(appointmentData.startDate).toISOString().slice(0, 10);
-    let newEndDate = new Date(appointmentData.endDate).toISOString().slice(0, 10);
+    let newStartDate = new Date(appointmentData.startDate);
+    let newEndDate = new Date(appointmentData.endDate);
 
-    let totalBooked = 0;
-    let key = `${selectedRoom}|${newStartDate}|${newEndDate}`;
+    // Ambil semua data booking yang ada
+    let appointments = e.component.option("dataSource") || [];
 
-    if (totalPeopleByRoomAndDate.hasOwnProperty(key)) {
-        totalBooked = totalPeopleByRoomAndDate[key];
-    }
-
-    console.log(`Total Booked for Room ${selectedRoom} on ${newStartDate} - ${newEndDate}: ${totalBooked}`);
+    // Hitung total booked di ruangan & tanggal yang sama
+    let totalBooked = appointments
+        .filter(a =>
+            a.ghm_room_id === selectedRoom &&
+            new Date(a.startDate) <= newEndDate &&
+            new Date(a.endDate) >= newStartDate
+        )
+        .reduce((sum, a) => sum + (a.totalPeople || 0), 0);
 
     function validateBooking() {
         let guestCount = (form.getEditor("guest")?.option("value") || []).length;
@@ -62,95 +64,11 @@ onAppointmentFormOpening: function (e) {
                             return `${item.location} | ${item.text}`;
                         },
                         valueExpr: 'id',
-                        value: selectedRoom,
-                        onValueChanged: validateBooking
+                        value: appointmentData.ghm_room_id || null,
+                        onValueChanged: validateBooking()
                     }
                 }
             ]
         }
-    ]);
-}
-
-=================================================
-
-  public function getBookings(Request $request)
-{
-    $requests = DB::table('request_ghm')
-        ->where('requestStatus', 3)
-        ->leftJoin('users', 'request_ghm.createdBy', '=', 'users.id')
-        ->select(
-            'request_ghm.id',
-            'request_ghm.bu',
-            'request_ghm.sector',
-            'request_ghm.text',
-            'request_ghm.guest',
-            'request_ghm.family',
-            'request_ghm.employee',
-            'request_ghm.description',
-            'request_ghm.requestStatus',
-            'request_ghm.startDate',
-            'request_ghm.endDate',
-            'request_ghm.code',
-            'request_ghm.ghm_room_id',
-            'users.fullname as creator'
-        )
-        ->get();
-
-    // Query untuk menghitung totalPeople berdasarkan room dan tanggal yang sama
-    $totalPeopleData = DB::select("
-        SELECT 
-            ghm_room_id,
-            CONVERT(varchar, startDate, 126) AS startDate,
-            CONVERT(varchar, endDate, 126) AS endDate,
-            COALESCE(SUM(EmployeeCount), 0) AS totalEmployee,
-            COALESCE(SUM(GuestCount), 0) AS totalGuest,
-            COALESCE(SUM(FamilyCount), 0) AS totalFamily,
-            COALESCE(SUM(EmployeeCount + GuestCount + FamilyCount), 0) AS totalAll
-        FROM 
-            [request_ghm]
-        CROSS APPLY (SELECT COUNT(*) AS EmployeeCount FROM OPENJSON(employee)) AS EmpData
-        CROSS APPLY (SELECT COUNT(*) AS GuestCount FROM OPENJSON(guest)) AS GuestData
-        CROSS APPLY (SELECT COUNT(*) AS FamilyCount FROM OPENJSON(family)) AS FamilyData
-        WHERE requestStatus = 3
-        GROUP BY ghm_room_id, startDate, endDate
-    ");
-
-    // Buat array untuk mapping totalPeople berdasarkan room dan tanggal
-    $totalPeopleByRoomAndDate = [];
-    foreach ($totalPeopleData as $item) {
-        $key = $item->ghm_room_id . "|" . $item->startDate . "|" . $item->endDate;
-        $totalPeopleByRoomAndDate[$key] = $item->totalAll;
-    }
-
-    if ($requests->isEmpty()) {
-        $booking = [];
-    } else {
-        $booking = $requests->map(function ($request) use ($totalPeopleByRoomAndDate) {
-            $key = $request->ghm_room_id . "|" . optional($request->startDate)->toIso8601String() . "|" . optional($request->endDate)->toIso8601String();
-            $totalPeople = $totalPeopleByRoomAndDate[$key] ?? 0;
-
-            return [
-                'id' => $request->id,
-                'bu' => $request->bu,
-                'sector' => $request->sector,
-                'text' => $request->text ?? '',
-                'guest' => $request->guest ?? 0,
-                'family' => $request->family ?? 0,
-                'employee' => $request->employee ?? null,
-                'description' => $request->description ?? '',
-                'requestStatus' => $request->requestStatus ?? 0,
-                'startDate' => optional($request->startDate)->toIso8601String(),
-                'endDate' => optional($request->endDate)->toIso8601String(),
-                'code' => $request->code ?? null,
-                'creator' => $request->creator ?? null,
-                'ghm_room_id' => $request->ghm_room_id,
-                'totalPeople' => $totalPeople,
-            ];
-        });
-    }
-
-    return response()->json([
-        'requests' => $booking,
-        'totalPeopleByRoomAndDate' => $totalPeopleByRoomAndDate
     ]);
 }
