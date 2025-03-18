@@ -1,54 +1,110 @@
-$gethrslQuery = "(select TOP 1 CASE WHEN a.user_id='".$userId."' then 1 else 0 end 
-            from tbl_approverListReq l
-            left join tbl_approver a on l.approver_id=a.id
-            left join tbl_approvaltype r on a.approvaltype_id = r.id 
-            where l.req_id = request_ghm.id and l.module_id = '".$module_id."' and r.ApprovalType='HR Service Leader' and r.isactive='1'
-            order by a.sequence)";
+public function getTotalPeopleData()
+{
+    $totalPeopleData = DB::select("
+        SELECT 
+            request_ghm.id,
+            request_ghm.ghm_room_id,
+            request_ghm.startDate,
+            request_ghm.endDate,
+            COALESCE(SUM(EmployeeCount), 0) AS totalEmployee,
+            COALESCE(SUM(GuestCount), 0) AS totalGuest,
+            COALESCE(SUM(FamilyCount), 0) AS totalFamily,
+            COALESCE(SUM(EmployeeCount + GuestCount + FamilyCount), 0) AS totalAll
+        FROM 
+            [request_ghm]
+        CROSS APPLY (SELECT COUNT(*) AS EmployeeCount FROM OPENJSON(employee)) AS EmpData
+        CROSS APPLY (SELECT COUNT(*) AS GuestCount FROM OPENJSON(guest)) AS GuestData
+        CROSS APPLY (SELECT COUNT(*) AS FamilyCount FROM OPENJSON(family)) AS FamilyData
+        WHERE requestStatus = 3
+        GROUP BY request_ghm.id, request_ghm.ghm_room_id, request_ghm.startDate, request_ghm.endDate
+    ");
 
-$requests = Ghm::query()
-    ->where(function ($query) use ($userId, $isAdmin, $gethrslQuery) {
-        if ($isAdmin) {
-            // Admin melihat semua request kecuali miliknya, dengan status 1, 3, 4
-            $query->where("request_ghm.user_id", "!=", $userId)
-                ->whereIn("request_ghm.requestStatus", [1, 3, 4]);
-        } else {
-            // Subquery untuk menentukan apakah user adalah HRSL
-            $query->whereRaw("$gethrslQuery = 1", [])
-                ->whereIn("request_ghm.requestStatus", [1, 2, 3, 4])
-                ->orWhere(function ($q) use ($userId) {
-                    // User biasa hanya bisa melihat request miliknya sendiri atau request status = 3
-                    $q->where("request_ghm.user_id", "=", $userId)
-                      ->orWhere("request_ghm.requestStatus", 3);
-                });
+    return response()->json($totalPeopleData);
+}
+
+====================================================
+            
+onAppointmentFormOpening: async function (e) {
+    const form = e.form;
+    const appointmentData = e.appointmentData;
+
+    let selectedRoom = appointmentData.ghm_room_id || null;
+    let selectedStartDate = new Date(appointmentData.startDate);
+    let selectedEndDate = new Date(appointmentData.endDate);
+
+    // Ambil totalPeople dari backend
+    let totalPeopleArray = await fetch('/api/getTotalPeopleData')
+        .then(response => response.json())
+        .catch(error => {
+            console.error("Error fetching totalPeople:", error);
+            return [];
+        });
+
+    // Hitung totalPeople berdasarkan roomId & tanggal yang overlap
+    let totalBooked = totalPeopleArray
+        .filter(booking => 
+            booking.ghm_room_id === selectedRoom &&
+            (
+                (selectedStartDate >= new Date(booking.startDate) && selectedStartDate < new Date(booking.endDate)) ||
+                (selectedEndDate > new Date(booking.startDate) && selectedEndDate <= new Date(booking.endDate)) ||
+                (selectedStartDate <= new Date(booking.startDate) && selectedEndDate >= new Date(booking.endDate))
+            )
+        )
+        .reduce((sum, booking) => sum + booking.totalAll, 0);
+
+    function validateBooking() {
+        let guestCount = (form.getEditor("guest")?.option("value") || []).length;
+        let familyCount = (form.getEditor("family")?.option("value") || []).length;
+        let employeeCount = (form.getEditor("employee")?.option("value") || []).length;
+        let totalGuests = guestCount + familyCount + employeeCount;
+
+        let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;
+        let remainingCapacity = roomCapacity - (totalGuests + totalBooked);
+
+        // Tampilkan notifikasi jika melebihi kapasitas
+        if (totalGuests + totalBooked > roomCapacity) {
+            DevExpress.ui.notify({
+                type: "error",
+                displayTime: 3000,
+                contentTemplate: (e) => {
+                    e.append(`
+                        <div style="white-space: pre-line;">
+                        Guest limit exceeded, Please adjust your booking!\n
+                        Jumlah tamu melebihi kapasitas, sesuaikan dengan kapasitas!\n
+                        </div>
+                    `);
+                }
+            });
         }
-    })
-    ->with(['User', 'code', 'ghm_room'])
-    ->get();
 
+        return { roomCapacity, totalGuests, remainingCapacity, totalBooked };
+    }
 
+    const { roomCapacity, totalGuests, remainingCapacity } = validateBooking();
 
-
-
-$requests = Ghm::query()
-    ->where(function ($query) use ($userId, $isAdmin, $gethrsl) {
-        if ($isAdmin) {
-            // Admin melihat semua request kecuali miliknya, dengan status 1, 3, 4
-            $query->where("request_ghm.user_id", "!=", $userId)
-                ->whereIn("request_ghm.requestStatus", [1, 3, 4]);
-        } elseif ($gethrsl) {
-            // HR Service Leader melihat request miliknya sendiri + request orang lain dengan status 1, 2, 3, 4
-            $query->where("request_ghm.user_id", "=", $userId)
-                ->orWhereIn("request_ghm.requestStatus", [1, 2, 3, 4]);
-        } else {
-            // User biasa hanya bisa melihat request miliknya sendiri
-            $query->where("request_ghm.user_id", "=", $userId);
+    form.option('items', [
+        {
+            itemType: 'group',
+            caption: 'Room & Date',
+            items: [
+                {
+                    label: { text: 'Room' },
+                    editorType: 'dxSelectBox',
+                    dataField: 'ghm_room_id',
+                    helpText: `Occupancy: ${roomCapacity} | Booked: ${totalBooked} | Remaining: ${remainingCapacity}`,
+                    editorOptions: {
+                        readOnly: true,
+                        dataSource: roomsWithLocations,
+                        displayExpr: function (item) {
+                            if (!item) return "";
+                            return `${item.location} | ${item.text}`;
+                        },
+                        valueExpr: 'id',
+                        value: selectedRoom,
+                        onValueChanged: validateBooking
+                    }
+                }
+            ]
         }
-    })
-    ->orWhere(function ($query) use ($userId, $isAdmin, $gethrsl) {
-        if (!$isAdmin && !$gethrsl) {
-            // Hanya user biasa yang bisa melihat request dengan status = 3, meskipun bukan miliknya
-            $query->where("request_ghm.requestStatus", 3);
-        }
-    })
-    ->with(['User', 'code', 'ghm_room'])
-    ->get();
+    ]);
+}
