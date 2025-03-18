@@ -5,17 +5,29 @@ onAppointmentFormOpening: function (e) {
     let newStartDate = new Date(appointmentData.startDate);
     let newEndDate = new Date(appointmentData.endDate);
 
-    // Ambil semua data booking yang ada
+    // Debugging Step 1: Cek semua booking yang ada
     let appointments = e.component.option("dataSource") || [];
+    console.log("Semua Appointments:", appointments);
+
+    // Debugging Step 2: Cek room dan tanggal yang dipilih
+    console.log("Room Dipilih:", selectedRoom);
+    console.log("Start Date Baru:", newStartDate);
+    console.log("End Date Baru:", newEndDate);
+
+    // Debugging Step 3: Filter bookings berdasarkan room & date
+    let filteredAppointments = appointments.filter(a =>
+        a.ghm_room_id === selectedRoom &&
+        new Date(a.startDate) <= newEndDate &&
+        new Date(a.endDate) >= newStartDate
+    );
+    console.log("Filtered Appointments:", filteredAppointments);
+
+    // Debugging Step 4: Cek totalPeople sebelum reduce
+    console.log("Total Booked Sebelum Reduce:", filteredAppointments.map(a => a.totalPeople));
 
     // Hitung total booked di ruangan & tanggal yang sama
-    let totalBooked = appointments
-        .filter(a =>
-            a.ghm_room_id === selectedRoom &&
-            new Date(a.startDate) <= newEndDate &&
-            new Date(a.endDate) >= newStartDate
-        )
-        .reduce((sum, a) => sum + (a.totalPeople || 0), 0);
+    let totalBooked = filteredAppointments.reduce((sum, a) => sum + (a.totalPeople || 0), 0);
+    console.log("Total Booked Akhir:", totalBooked);
 
     function validateBooking() {
         let guestCount = (form.getEditor("guest")?.option("value") || []).length;
