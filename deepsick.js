@@ -3,7 +3,17 @@ onAppointmentFormOpening: function (e) {
     const appointmentData = e.appointmentData;
 
     let selectedRoom = appointmentData.ghm_room_id || null;
-    let totalBooked = appointmentData.totalPeople || 0; // Gunakan data yang sudah ada, default ke 0 jika undefined
+    let newStartDate = new Date(appointmentData.startDate);
+    let newEndDate = new Date(appointmentData.endDate);
+
+    // 🔥 Hitung total orang yang sudah terbooking di ruangan & tanggal yang sama
+    let totalBooked = appointments
+        .filter(appt => 
+            appt.ghm_room_id === selectedRoom && 
+            new Date(appt.startDate) <= newEndDate && 
+            new Date(appt.endDate) >= newStartDate
+        )
+        .reduce((sum, appt) => sum + (appt.totalPeople || 0), 0);
 
     function validateBooking() {
         let guestCount = (form.getEditor("guest")?.option("value") || []).length;
