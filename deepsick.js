@@ -6,8 +6,11 @@ onAppointmentFormOpening: function (e) {
     let newStartDate = new Date(appointmentData.startDate);
     let newEndDate = new Date(appointmentData.endDate);
 
+    // ✅ Pastikan `appointments` adalah array, jika tidak, gunakan array kosong.
+    let existingAppointments = Array.isArray(appointments) ? appointments : [];
+
     // 🔥 Hitung total orang yang sudah terbooking di ruangan & tanggal yang sama
-    let totalBooked = appointments
+    let totalBooked = existingAppointments
         .filter(appt => 
             appt.ghm_room_id === selectedRoom && 
             new Date(appt.startDate) <= newEndDate && 
