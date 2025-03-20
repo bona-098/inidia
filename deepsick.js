@@ -1,57 +1,59 @@
-{
-                            itemType: 'group',
-                            caption: 'Supporting Document',
-                            colSpan: 2,
-                            items: [
-                                {
-                                    itemType: 'simple',
-                                    template: function(data, container) {
-                                        var supporting = $("<div id='formattachment'>").dxDataGrid({    
-                                            dataSource: storewithmodule('attachmentrequest', modelclass, reqid),
-                                            allowColumnReordering: true,
-                                            allowColumnResizing: true,
-                                            columnsAutoWidth: true,
-                                            rowAlternationEnabled: true,
-                                            wordWrapEnabled: true,
-                                            showBorders: true,
-                                            filterRow: { visible: false },
-                                            filterPanel: { visible: false },
-                                            headerFilter: { visible: false },
-                                            paging: { enabled: true, pageSize: 10 },
-                                            columns: [
-                                                { 
-                                                    caption: 'Attachment',
-                                                    dataField: "path",
-                                                    allowFiltering: false,
-                                                    allowSorting: false,
-                                                    validationRules: [{ type: "required" }],
-                                                    cellTemplate: function(container, options) {
-                                                        $("<div>").dxFileUploader({
-                                                            multiple: false,  
-                                                            accept: "image/*,.pdf,.doc,.docx,.xls,.xlsx", 
-                                                            uploadMode: "useForm",  
-                                                            maxFileSize: 5242880,  
-                                                            showFileList: true,  
-                                                            selectButtonText: "Pilih File",
-                                                            labelText: "",  
-                                                            onValueChanged: function(e) {
-                                                                if (e.value.length > 0) {
-                                                                    let selectedFile = e.value[0];  
-                                                                    DevExpress.ui.notify("File dipilih: " + selectedFile.name, "info", 2000);
-                                                                    options.setValue(selectedFile.name);  
-                                                                }
-                                                            }
-                                                        });
-                                                        $(container).append(fileUploader);
-                                                    }
-                                                }
-                                            ],
-                                        });
-                                        $(container).append(supporting);
-                                    }                                        
-                                }
-                            ] 
-                        } 
+$(function () {
+    var supporting = $("<div id='formattachment'>").dxDataGrid({    
+        dataSource: storewithmodule('attachmentrequest', modelclass, reqid),
+        allowColumnReordering: true,
+        allowColumnResizing: true,
+        columnsAutoWidth: true,
+        rowAlternationEnabled: true,
+        wordWrapEnabled: true,
+        showBorders: true,
+        filterRow: { visible: false },
+        filterPanel: { visible: false },
+        headerFilter: { visible: false },
+        searchPanel: {
+            visible: true,
+            width: 240,
+            placeholder: 'Search...'
+        },
+        paging: { enabled: true, pageSize: 10 },
+        columns: [
+            { 
+                caption: 'Attachment',
+                dataField: "path",
+                allowFiltering: false,
+                allowSorting: false,
+                validationRules: [{ type: "required" }],
+                cellTemplate: function(container, options) {
+                    var fileUploader = $("<div>").dxFileUploader({
+                        multiple: false,  
+                        accept: "image/*,.pdf,.doc,.docx,.xls,.xlsx", 
+                        uploadMode: "useForm",  
+                        maxFileSize: 5242880,  
+                        showFileList: true,  
+                        selectButtonText: "Pilih File",
+                        labelText: "",  
+                        onValueChanged: function(e) {
+                            if (e.value.length > 0) {
+                                let selectedFile = e.value[0];  
+                                DevExpress.ui.notify("File dipilih: " + selectedFile.name, "info", 2000);
+                                options.setValue(selectedFile.name);  
+                            }
+                        }
+                    });
+
+                    $(container).append(fileUploader);
+                }
+            },
+            {
+                dataField: "remarks",
+                caption: "Remarks"
+            }
+        ]
+    });
+
+    $("#yourContainer").append(supporting);
+});
+
 
 
 
