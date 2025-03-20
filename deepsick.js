@@ -1,39 +1,42 @@
-columns: [
-    { 
-        caption: 'Attachment',
-        dataField: "path",
-        allowFiltering: false,
-        allowSorting: false,
-        validationRules: [
-            {
-                type: "custom",
-                validationCallback: function (e) {
-                    // Ambil data form saat ini
-                    let formData = e.component.option("formData");
+{
+    itemType: 'group',
+    caption: 'Supporting Document',
+    items: [
+        {
+            label: { text: 'Upload Document' },
+            editorType: 'dxFileUploader',
+            dataField: 'attachment',
+            editorOptions: {
+                multiple: false,  // Hanya satu file per upload
+                accept: "image/*,.pdf,.doc,.docx,.xls,.xlsx",
+                uploadMode: "useForm",  // Mode unggah file
+                maxFileSize: 5242880,  // 5MB
+                onValueChanged: function(e) {
+                    let file = e.value.length > 0 ? e.value[0].name : null;
+                    form.updateData("attachment", file);
+                }
+            },
+            validationRules: [
+                {
+                    type: "custom",
+                    validationCallback: function(e) {
+                        let formData = e.component.option("formData");
+                        let hasGuest = formData.guest && formData.guest.length > 0;
+                        let hasFamily = formData.family && formData.family.length > 0;
+                        let hasAttachment = formData.attachment;
 
-                    // Cek apakah guest atau family ada isinya
-                    let hasGuest = formData.guest && formData.guest.length > 0;
-                    let hasFamily = formData.family && formData.family.length > 0;
-
-                    // Jika guest atau family ada, file wajib diisi
-                    if (hasGuest || hasFamily) {
-                        return !!e.value; // Harus ada nilai (file ter-upload)
-                    }
-                    return true; // Jika tidak ada guest/family, tidak wajib
-                },
-                message: "Attachment is required for Guest or Family"
-            }
-        ],
-        editorOptions: {
-            accept: "image/*,.pdf,.doc,.docx,.xls,.xlsx",
-            uploadMode: "useForm",
-            maxFileSize: 5242880 // 5MB
+                        if ((hasGuest || hasFamily) && !hasAttachment) {
+                            return false;
+                        }
+                        return true;
+                    },
+                    message: "Attachment is required for Guest or Family"
+                }
+            ]
         }
-    },
-    {
-        dataField: "remarks"
-    }
-]
+    ]
+}
+
 
 onAppointmentFormOpening: function (e) {
                     e.popup.option ({
