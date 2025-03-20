@@ -7,12 +7,13 @@ SELECT
     tbl_approverListHistory.approvalDate,
     tbl_approverListHistory.module_id,
     CASE 
-        WHEN DATEDIFF(day, tbl_approverListHistory.approvalDate, request_ghm.startDate) >= 2 
+        WHEN DATEDIFF(day, tbl_approverListHistory.approvalDate, request_ghm.startDate) <= 2 
         THEN '00:00:00'
-        ELSE FORMAT(DATEADD(MINUTE, 
+        ELSE FORMAT(DATEADD(SECOND, 
             CASE 
-                WHEN DATEDIFF(MINUTE, tbl_approverListHistory.approvalDate, request_ghm.startDate) < 0 THEN 0
-                ELSE DATEDIFF(MINUTE, tbl_approverListHistory.approvalDate, request_ghm.startDate)
+                WHEN DATEDIFF(SECOND, DATEADD(DAY, 2, tbl_approverListHistory.approvalDate), request_ghm.startDate) < 0 
+                THEN 0
+                ELSE DATEDIFF(SECOND, DATEADD(DAY, 2, tbl_approverListHistory.approvalDate), request_ghm.startDate)
             END, '00:00:00'), 'HH:mm:ss')
     END AS time_left
 FROM request_ghm
