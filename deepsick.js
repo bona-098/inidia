@@ -1,3 +1,8 @@
+return !(hasGuest || hasFamily) || hasFile; // Jika ada Guest/Family, harus upload
+                },
+                data: form.option("formData") // Menggunakan data dari form
+            }],
+            validationMessageMode: "always" // Pas
 {
     itemType: 'group',
     caption: 'Supporting Document',
