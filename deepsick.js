@@ -1,3 +1,24 @@
+function validateBooking() {                
+                        let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;
+                        let remainingCapacity = roomCapacity - totalBooked;                
+                        if (totalBooked > roomCapacity) {
+                            DevExpress.ui.notify({
+                                type: "error",
+                                displayTime: 3000,
+                                contentTemplate: (e) => {
+                                    e.append(`
+                                        <div style="white-space: pre-line;">
+                                        Guest limit exceeded, Please adjust your booking!\n
+                                        Jumlah tamu melebihi kapasitas, sesuaikan dengan kapasitas!\n
+                                        </div>
+                                    `);
+                                }
+                            });
+                        }
+                        return { roomCapacity, remainingCapacity, totalBooked };
+                    }
+                    const { roomCapacity, remainingCapacity} = validateBooking();
+                    form.option('items', [ 
 {
     itemType: 'group',
     caption: 'Supporting Document',
