@@ -1,3 +1,40 @@
+columns: [
+    { 
+        caption: 'Attachment',
+        dataField: "path",
+        allowFiltering: false,
+        allowSorting: false,
+        validationRules: [
+            {
+                type: "custom",
+                validationCallback: function (e) {
+                    // Ambil data form saat ini
+                    let formData = e.component.option("formData");
+
+                    // Cek apakah guest atau family ada isinya
+                    let hasGuest = formData.guest && formData.guest.length > 0;
+                    let hasFamily = formData.family && formData.family.length > 0;
+
+                    // Jika guest atau family ada, file wajib diisi
+                    if (hasGuest || hasFamily) {
+                        return !!e.value; // Harus ada nilai (file ter-upload)
+                    }
+                    return true; // Jika tidak ada guest/family, tidak wajib
+                },
+                message: "Attachment is required for Guest or Family"
+            }
+        ],
+        editorOptions: {
+            accept: "image/*,.pdf,.doc,.docx,.xls,.xlsx",
+            uploadMode: "useForm",
+            maxFileSize: 5242880 // 5MB
+        }
+    },
+    {
+        dataField: "remarks"
+    }
+]
+
 onAppointmentFormOpening: function (e) {
                     e.popup.option ({
                         width: 700,
