@@ -1,41 +1,40 @@
 {
-    itemType: 'group',
-    caption: 'Supporting Document',
-    items: [
+    label: { text: 'Upload Document' },
+    editorType: 'dxFileUploader',
+    dataField: 'attachment',
+    editorOptions: {
+        multiple: false,
+        accept: "image/*,.pdf,.doc,.docx,.xls,.xlsx",
+        uploadMode: "useForm",  // Gunakan form submission, bukan auto-upload
+        maxFileSize: 5242880,   // Maksimal 5MB
+        showFileList: true,     // Menampilkan daftar file yang dipilih
+        selectButtonText: "Pilih File",  // Teks tombol pemilihan file
+        labelText: "",          // Hilangkan teks default
+        onValueChanged: function(e) {
+            if (e.value.length > 0) {
+                DevExpress.ui.notify("File dipilih: " + e.value[0].name, "info", 2000);
+            }
+        }
+    },
+    validationRules: [
         {
-            label: { text: 'Upload Document' },
-            editorType: 'dxFileUploader',
-            dataField: 'attachment',
-            editorOptions: {
-                multiple: false,  // Hanya satu file per upload
-                accept: "image/*,.pdf,.doc,.docx,.xls,.xlsx",
-                uploadMode: "useForm",  // Mode unggah file
-                maxFileSize: 5242880,  // 5MB
-                onValueChanged: function(e) {
-                    let file = e.value.length > 0 ? e.value[0].name : null;
-                    form.updateData("attachment", file);
-                }
-            },
-            validationRules: [
-                {
-                    type: "custom",
-                    validationCallback: function(e) {
-                        let formData = e.component.option("formData");
-                        let hasGuest = formData.guest && formData.guest.length > 0;
-                        let hasFamily = formData.family && formData.family.length > 0;
-                        let hasAttachment = formData.attachment;
+            type: "custom",
+            validationCallback: function(e) {
+                let formData = e.component.option("formData");
+                let hasGuest = formData.guest && formData.guest.length > 0;
+                let hasFamily = formData.family && formData.family.length > 0;
+                let hasAttachment = e.value.length > 0;
 
-                        if ((hasGuest || hasFamily) && !hasAttachment) {
-                            return false;
-                        }
-                        return true;
-                    },
-                    message: "Attachment is required for Guest or Family"
+                if ((hasGuest || hasFamily) && !hasAttachment) {
+                    return false;
                 }
-            ]
+                return true;
+            },
+            message: "Attachment is required for Guest or Family"
         }
     ]
 }
+
 
 
 onAppointmentFormOpening: function (e) {
