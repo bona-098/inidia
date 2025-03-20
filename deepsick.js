@@ -1,27 +1,49 @@
 {
-                            itemType: 'group',
-                            caption: 'Supporting Document',
-                            colSpan: 2,
-                            items: [
-                                {
-                                    itemType: 'simple',
-                                    dataField: 'uploads',
-                                    editorType: 'dxFileUploader',
-                                    editorOptions: {
-                                        selectButtonText: 'Select file',
-                                        accept: 'image/*',
-                                        uploadMode: 'useForm',
-                                        inputAttr: { 'aria-label': 'Select file' },
-                                        maxFileSize: 5242880,  // Batasan ukuran file maksimum
-                                        onValueChanged: function(e) {
-                                            if (e.value.length > 0) {
-                                                let selectedFile = e.value[0];
-                                                DevExpress.ui.notify("File dipilih: " + selectedFile.name, "info", 2000);
-                                                // Lakukan validasi atau tindakan tambahan di sini
-                                            }
-                                        }
-                                    }
-                                },
+    itemType: 'group',
+    caption: 'Supporting Document',
+    colSpan: 2,
+    items: [
+        {
+            itemType: 'simple',
+            dataField: 'uploads',
+            editorType: 'dxFileUploader',
+            editorOptions: {
+                selectButtonText: 'Select file',
+                accept: 'image/*,.pdf,.doc,.docx,.xls,.xlsx',
+                uploadMode: 'useForm',
+                inputAttr: { 'aria-label': 'Select file' },
+                maxFileSize: 5242880,  // Maksimum 5MB
+                onValueChanged: function(e) {
+                    if (e.value.length > 0) {
+                        let selectedFile = e.value[0];
+                        DevExpress.ui.notify("File dipilih: " + selectedFile.name, "info", 2000);
+                        form.updateData('hasFile', true); // Tandai bahwa file sudah diupload
+                    } else {
+                        form.updateData('hasFile', false); // Reset jika tidak ada file
+                    }
+                }
+            },
+            validationRules: [{
+                type: 'custom',
+                message: 'Dokumen wajib diupload jika ada Guest atau Family!',
+                validationCallback: function(params) {
+                    let formData = params.rule.data;
+                    let hasGuest = formData.guest && formData.guest.length > 0;
+                    let hasFamily = formData.family && formData.family.length > 0;
+                    let hasFile = formData.hasFile || false;
+                    
+                    // Wajib upload jika ada Guest atau Family
+                    if ((hasGuest || hasFamily) && !hasFile) {
+                        return false; // Gagal validasi
+                    }
+                    return true; // Lolos validasi
+                },
+                data: form.option("formData") // Ambil data form untuk validasi dinamis
+            }]
+        }
+    ]
+}
+
 
 
 
