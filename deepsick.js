@@ -24,6 +24,18 @@ function validateBooking() {
     // Jika guest atau family diisi, dokumen harus diunggah
     form.itemOption("supportingDocument", "isRequired", hasGuestOrFamily);
 
+    // Update pesan peringatan
+    let warningMessage = $("#supportingDocumentWarning");
+    if (hasGuestOrFamily) {
+        if (warningMessage.length === 0) {
+            $("#formattachment").after(
+                "<div id='supportingDocumentWarning' style='color: red; margin-top: 5px;'>* Supporting Document is required for Guest or Family.</div>"
+            );
+        }
+    } else {
+        warningMessage.remove();
+    }
+
     return { roomCapacity, remainingCapacity, totalBooked };
 }
 
