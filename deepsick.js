@@ -1,39 +1,91 @@
 {
-    label: { text: 'Upload Document' },
-    editorType: 'dxFileUploader',
-    dataField: 'attachment',
-    editorOptions: {
-        multiple: false,
-        accept: "image/*,.pdf,.doc,.docx,.xls,.xlsx",
-        uploadMode: "useForm",  // Gunakan form submission, bukan auto-upload
-        maxFileSize: 5242880,   // Maksimal 5MB
-        showFileList: true,     // Menampilkan daftar file yang dipilih
-        selectButtonText: "Pilih File",  // Teks tombol pemilihan file
-        labelText: "",          // Hilangkan teks default
-        onValueChanged: function(e) {
-            if (e.value.length > 0) {
-                DevExpress.ui.notify("File dipilih: " + e.value[0].name, "info", 2000);
-            }
-        }
-    },
-    validationRules: [
+    itemType: 'group',
+    colSpan: 2,
+    caption: 'Supporting Document',
+    items: [
         {
-            type: "custom",
-            validationCallback: function(e) {
-                let formData = e.component.option("formData");
-                let hasGuest = formData.guest && formData.guest.length > 0;
-                let hasFamily = formData.family && formData.family.length > 0;
-                let hasAttachment = e.value.length > 0;
+            itemType: 'simple',
+            template: function(data, container) {
+                var supporting = $("<div id='formattachment'>").dxDataGrid({    
+                    dataSource: storewithmodule('attachmentrequest', modelclass, reqid),
+                    allowColumnReordering: true,
+                    allowColumnResizing: true,
+                    columnsAutoWidth: true,
+                    rowAlternationEnabled: true,
+                    wordWrapEnabled: true,
+                    showBorders: true,
+                    filterRow: { visible: false },
+                    filterPanel: { visible: false },
+                    headerFilter: { visible: false },
+                    searchPanel: {
+                        visible: true,
+                        width: 240,
+                        placeholder: 'Search...'
+                    },
+                    paging: { enabled: true, pageSize: 10 },
+                    columns: [
+                        { 
+                            caption: 'Attachment',
+                            dataField: "path",
+                            allowFiltering: false,
+                            allowSorting: false,
+                            validationRules: [{ type: "required" }],
+                            cellTemplate: function(container, options) {
+                                var fileUploader = $("<div>").dxFileUploader({
+                                    multiple: false,  
+                                    accept: "image/*,.pdf,.doc,.docx,.xls,.xlsx", 
+                                    uploadMode: "useForm",  
+                                    maxFileSize: 5242880,  
+                                    showFileList: true,  
+                                    selectButtonText: "Pilih File",
+                                    labelText: "",  
+                                    onValueChanged: function(e) {
+                                        if (e.value.length > 0) {
+                                            let selectedFile = e.value[0];  
+                                            DevExpress.ui.notify("File dipilih: " + selectedFile.name, "info", 2000);
+                                            options.setValue(selectedFile.name);  
+                                        }
+                                    }
+                                });
+                                $(container).append(fileUploader);
+                            }
+                        },
+                        {
+                            dataField: "remarks",
+                            caption: "Remarks"
+                        }
+                    ],
+                });
 
-                if ((hasGuest || hasFamily) && !hasAttachment) {
-                    return false;
-                }
-                return true;
-            },
-            message: "Attachment is required for Guest or Family"
+                $(container).append(supporting);
+
+                // Validasi jika Guest Type adalah "Guest" atau "Family"
+                var validateUpload = function() {
+                    let formData = form.option("formData");
+                    let isRequired = (formData.guest && formData.guest.length > 0) || 
+                                     (formData.family && formData.family.length > 0);
+                    
+                    let gridData = $("#formattachment").dxDataGrid("instance").option("dataSource");
+                    let hasAttachment = gridData.length > 0 && gridData.some(row => row.path);
+
+                    if (isRequired && !hasAttachment) {
+                        DevExpress.ui.notify("Supporting document wajib diunggah untuk Guest atau Family!", "error", 3000);
+                        return false;
+                    }
+                    return true;
+                };
+
+                // Menjalankan validasi setiap kali Guest/Family diubah
+                form.option("onFieldDataChanged", function(e) {
+                    if (e.dataField === "guest" || e.dataField === "family") {
+                        validateUpload();
+                    }
+                });
+            }
         }
     ]
 }
+
 
 
 
