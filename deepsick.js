@@ -1,3 +1,9 @@
+{
+                            itemType: 'group',
+                            caption: 'Supporting Document <span style="font-size: smaller;">(required for guest and family)</span>',
+                            colSpan: 2,
+                            items: [
+                                {
 return !(hasGuest || hasFamily) || hasFile; // Jika ada Guest/Family, harus upload
                 },
                 data: form.option("formData") // Menggunakan data dari form
