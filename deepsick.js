@@ -1,9 +1,13 @@
 {
-                            itemType: 'group',
-                            caption: 'Supporting Document <span style="font-size: smaller;">(required for guest and family)</span>',
-                            colSpan: 2,
-                            items: [
-                                {
+    itemType: 'group',
+    colSpan: 2,
+    template: function(data, container) {
+        $("<div>")
+            .html("<strong>Supporting Document</strong> <span style='font-size: smaller;'>(required for guest and family)</span>")
+            .appendTo(container);
+    },
+    items: [
+        {
 return !(hasGuest || hasFamily) || hasFile; // Jika ada Guest/Family, harus upload
                 },
                 data: form.option("formData") // Menggunakan data dari form
