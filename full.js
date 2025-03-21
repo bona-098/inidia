@@ -1,15 +1,18 @@
 DB::raw("CASE 
             WHEN DATEDIFF(day, tbl_approverListHistory.approvalDate, request_ghm.startDate) <= 2 
-            THEN '00:00:00'
+            THEN '0:00:00:00'
             ELSE 
                 CASE 
                     WHEN DATEDIFF(SECOND, DATEADD(DAY, 2, tbl_approverListHistory.approvalDate), request_ghm.startDate) < 0 
                     THEN '-' + 
-                        FORMAT(DATEADD(SECOND, ABS(DATEDIFF(SECOND, DATEADD(DAY, 2, tbl_approverListHistory.approvalDate), request_ghm.startDate)), 0), 'HH:mm:ss')
+                        CAST(ABS(DATEDIFF(SECOND, DATEADD(DAY, 2, tbl_approverListHistory.approvalDate), request_ghm.startDate)) / 86400 AS VARCHAR) + ':' +
+                        FORMAT(DATEADD(SECOND, ABS(DATEDIFF(SECOND, DATEADD(DAY, 2, tbl_approverListHistory.approvalDate), request_ghm.startDate)) % 86400, 0), 'HH:mm:ss')
                     ELSE 
-                        FORMAT(DATEADD(SECOND, DATEDIFF(SECOND, DATEADD(DAY, 2, tbl_approverListHistory.approvalDate), request_ghm.startDate), 0), 'HH:mm:ss')
+                        CAST(DATEDIFF(SECOND, DATEADD(DAY, 2, tbl_approverListHistory.approvalDate), request_ghm.startDate) / 86400 AS VARCHAR) + ':' +
+                        FORMAT(DATEADD(SECOND, DATEDIFF(SECOND, DATEADD(DAY, 2, tbl_approverListHistory.approvalDate), request_ghm.startDate) % 86400, 0), 'HH:mm:ss')
                 END
         END AS time_left")
+
 
 <?php
 
