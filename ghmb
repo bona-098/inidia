@@ -416,7 +416,7 @@ $(function () {
                 
                     function validateBooking() {
                         let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;
-                        let remainingCapacity = roomCapacity - totalBooked;
+                        let remainingCapacity = roomCapacity - totalBooked;                        
                         if (totalBooked > roomCapacity) {
                             DevExpress.ui.notify({
                                 type: "error",
@@ -444,7 +444,9 @@ $(function () {
                         } else {
                             warningMessage.remove();
                         }
+                        
                         return { roomCapacity, remainingCapacity, totalBooked };
+                        
                     }
                 
                     function cleanupForm() {
@@ -770,24 +772,24 @@ $(function () {
                     }
                 
                     // Check if supporting document is required
-                    // let hasGuestOrFamily = guestCount > 0 || familyCount > 0;
-                    // let supportingDocumentPresent = appointmentData.supportingDocument && appointmentData.supportingDocument.length > 0;
-                    // if (hasGuestOrFamily && !supportingDocumentPresent) {
-                    //     DevExpress.ui.notify({
-                    //         type: "error",
-                    //         displayTime: 3000,
-                    //         contentTemplate: (e) => {
-                    //             e.append(`
-                    //                 <div style="white-space: pre-line;">
-                    //                 Supporting Document is required when Guest or Family is selected.\n
-                    //                 Dokumen Pendukung diperlukan ketika Tamu atau Keluarga dipilih.\n
-                    //                 </div>
-                    //             `);
-                    //         }
-                    //     });
-                    //     e.cancel = true;
-                    //     return;
-                    // }
+                    let hasGuestOrFamily = guestCount > 0 || familyCount > 0;
+                    let supportingDocumentPresent = appointmentData.supportingDocument && appointmentData.supportingDocument.length > 0;
+                    if (hasGuestOrFamily && !supportingDocumentPresent) {
+                        DevExpress.ui.notify({
+                            type: "error",
+                            displayTime: 3000,
+                            contentTemplate: (e) => {
+                                e.append(`
+                                    <div style="white-space: pre-line;">
+                                    Supporting Document is required when Guest or Family is selected.\n
+                                    Dokumen Pendukung diperlukan ketika Tamu atau Keluarga dipilih.\n
+                                    </div>
+                                `);
+                            }
+                        });
+                        e.cancel = true;
+                        return;
+                    }
                 
                     let sector = roomData.sector;
                     let bookingData = await loadNewData();
