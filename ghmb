@@ -9,6 +9,29 @@ function serializeToJSON(employeeIds) {
 function deserializeFromJSON(jsonString) {
     return JSON.parse(jsonString);
 }
+function validateSupportingDocument() {
+    let formData = form.option("formData");
+    let hasGuestOrFamily = (formData.guest && formData.guest.length > 0) || (formData.family && formData.family.length > 0);
+    form.itemOption("supportingDocument", "isRequired", hasGuestOrFamily);
+    let warningMessage = $("#supportingDocumentWarning");
+    
+    if (hasGuestOrFamily) {
+        if (warningMessage.length === 0) {
+            $("#formattachment").after(
+                "<div id='supportingDocumentWarning' style='color: red; margin-top: 5px;'>* Dokumen pendukung diperlukan untuk tamu atau keluarga.</div>"
+            );
+        }
+    } else {
+        warningMessage.remove();
+    }
+
+    let supportingDocument = form.getEditor("supportingDocument")?.option("value");
+    if (hasGuestOrFamily && (!supportingDocument || supportingDocument.length === 0)) {
+        DevExpress.ui.notify("Dokumen pendukung harus disertakan untuk tamu atau keluarga!", "error", 2000);
+        return false;
+    }
+    return true;
+}
 $(function () {
     function submitFormData() {
         if (dataSubmitted) return;
@@ -18,6 +41,11 @@ $(function () {
         guestField.value = (guestField.value.split(',').map(name => name.trim()));
         const familyField = formData.find(field => field.name === 'family');
         familyField.value = serializeToJSON(familyField.value.split(',').map(name => name.trim()));
+        // Validasi booking sebelum mengirimkan data
+        if (!validateBooking() || !validateSupportingDocument()) {
+            dataSubmitted = false;
+            return;
+        }
         sendRequest(apiurl + "/" + modname, "POST")
         .then(function (response) {
             if (response.status === 'success') {
@@ -31,7 +59,7 @@ $(function () {
         }).finally(function () {
             dataSubmitted = false;
         });
-    }
+    }    
     $('#booking-form').on('submit', function (event) {
         event.preventDefault();
         submitFormData();
