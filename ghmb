@@ -66,7 +66,6 @@ $(function () {
         .then(response => response.json())
         .then(response => {
             bookingData = response.booking;    
-            console.log("Data New Booking Loaded:", bookingData);
             return response.booking;
         }).catch(function (error) {
             alert('Error: ' + error.responseText);
@@ -82,7 +81,6 @@ $(function () {
         .then(response => response.json())
         .then(response => {
             let data = response.booking;    
-            console.log("Data Booking Loaded:", data);
             schedulerInstance.option("dataSource", data);
             schedulerInstance.repaint();
         }).catch(function (error) {
@@ -178,7 +176,6 @@ $(function () {
         let dailyGuestCount = 0; 
         appointments.forEach(appointment => {
         if (appointment.requestStatus == 4) {
-            console.log(`Skipping rejected booking ID: ${appointment.id}`);
             return;
         }   
             let bookingStart = new Date(startDate);
@@ -195,7 +192,6 @@ $(function () {
                     let totalGuests = guestCount + familyCount + employeeCount;
 
                     dailyGuestCount = (dailyGuestCount || 0) + totalGuests;
-                    console.log("dailyGuestCount", dailyGuestCount);
             }
         });
         return dailyGuestCount;
@@ -416,7 +412,7 @@ $(function () {
                 
                     function validateBooking() {
                         let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;
-                        let remainingCapacity = roomCapacity - totalBooked;                        
+                        let remainingCapacity = roomCapacity - totalBooked;
                         if (totalBooked > roomCapacity) {
                             DevExpress.ui.notify({
                                 type: "error",
@@ -444,17 +440,13 @@ $(function () {
                         } else {
                             warningMessage.remove();
                         }
-                        
                         return { roomCapacity, remainingCapacity, totalBooked };
-                        
                     }
                 
                     function cleanupForm() {
-                        console.log("Cleaning up form...");
                         form.option("formData", {});
                         let dataGridAttachment = $("#formattachment").dxDataGrid("instance");
                         if (dataGridAttachment) {
-                            console.log("Resetting data source...");
                             dataGridAttachment.option("dataSource", []);
                         }
                     }
@@ -721,7 +713,6 @@ $(function () {
                                                 });
                                             },
                                             onDataErrorOccurred: function (e) {
-                                                console.log("Error loading data:", e.error.message);
                                                 dataGridAttachment.refresh();
                                             }
                                         });
@@ -769,28 +760,7 @@ $(function () {
                         DevExpress.ui.notify("Room not Found", "error", 3000);
                         e.cancel = true;
                         return;
-                    }
-                
-                    // Check if supporting document is required
-                    let hasGuestOrFamily = guestCount > 0 || familyCount > 0;
-                    let supportingDocumentPresent = appointmentData.supportingDocument && appointmentData.supportingDocument.length > 0;
-                    if (hasGuestOrFamily && !supportingDocumentPresent) {
-                        DevExpress.ui.notify({
-                            type: "error",
-                            displayTime: 3000,
-                            contentTemplate: (e) => {
-                                e.append(`
-                                    <div style="white-space: pre-line;">
-                                    Supporting Document is required when Guest or Family is selected.\n
-                                    Dokumen Pendukung diperlukan ketika Tamu atau Keluarga dipilih.\n
-                                    </div>
-                                `);
-                            }
-                        });
-                        e.cancel = true;
-                        return;
-                    }
-                
+                    }                
                     let sector = roomData.sector;
                     let bookingData = await loadNewData();
                     let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;
