@@ -189,8 +189,6 @@ $(function () {
                 ) || ((new Date (appointment.endDate) <= bookingEnd) && (new Date (appointment.endDate) > bookingStart))
             )) 
             {                
-                // console.log("appointment", appointment);
-
                 let guestCount = safeArray(appointment.guest).length;
                     let familyCount = safeArray(appointment.family).length;
                     let employeeCount = safeArray(appointment.employee).length;
@@ -202,29 +200,13 @@ $(function () {
         });
         return dailyGuestCount;
     }
-    function validateUploadField() {
-        const formInstance = $("#form").dxForm("instance");
-    
-        if (formInstance) {
-            const fileUploader = formInstance.getEditor("path");
-            const validationGroup = DevExpress.validationEngine.getGroupConfig("form");
-            
-            if (fileUploader) {
-                fileUploader.validate();
-            }
-    
-            // Validasi tambahan jika diperlukan, misalnya validasi seluruh form
-            if (validationGroup) {
-                validationGroup.validate();
-            }
-        }
-    }
     function moveEditColumnToLeft(dataGrid) {
         dataGrid.columnOption("command:edit", { 
             visibleIndex: -1,
             width: 80 
         });
     }
+    
     function updateScheduler(location, roomId) {
         let dataSource = roomsWithLocations.filter(emp => emp.location === location);
         if (roomId) {
@@ -405,12 +387,19 @@ $(function () {
                     if (e.rowType == "data" && e.data.isParent === 1) {
                         e.cellElement.css('background', 'rgba(128, 128, 0, 0.1)');
                     }
-                },
+                },  
                 onAppointmentFormOpening: function (e) {
-                    e.popup.option ({
+                    e.popup.option({
                         width: 700,
-                        height: 800
+                        height: 800,
+                        onHiding: function () {
+                            cleanupForm();
+                        },
+                        onHidden: function () {
+                            cleanupForm();
+                        }
                     });
+                
                     const form = e.form;
                     const appointmentData = e.appointmentData;
                     const reqid = (appointmentData.id) || 0;
@@ -426,9 +415,9 @@ $(function () {
                         )
                         .reduce((sum, a) => sum + (Number(a.totalPeople) || 0), 0);
                 
-                    function validateBooking() {                
+                    function validateBooking() {
                         let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;
-                        let remainingCapacity = roomCapacity - totalBooked;                
+                        let remainingCapacity = roomCapacity - totalBooked;
                         if (totalBooked > roomCapacity) {
                             DevExpress.ui.notify({
                                 type: "error",
@@ -443,10 +432,34 @@ $(function () {
                                 }
                             });
                         }
+                        let formData = form.option("formData");
+                        let hasGuestOrFamily = (formData.guest && formData.guest.length > 0) || (formData.family && formData.family.length > 0);
+                        form.itemOption("supportingDocument", "isRequired", hasGuestOrFamily);
+                        let warningMessage = $("#supportingDocumentWarning");
+                        if (hasGuestOrFamily) {
+                            if (warningMessage.length === 0) {
+                                $("#formattachment").after(
+                                    "<div id='supportingDocumentWarning' style='color: red; margin-top: 5px;'>* Supporting Document is required for Guest or Family.</div>"
+                                );
+                            }
+                        } else {
+                            warningMessage.remove();
+                        }
                         return { roomCapacity, remainingCapacity, totalBooked };
                     }
-                    const { roomCapacity, remainingCapacity} = validateBooking();
-                    form.option('items', [                          
+                
+                    function cleanupForm() {
+                        console.log("Cleaning up form...");
+                        form.option("formData", {});
+                        let dataGridAttachment = $("#formattachment").dxDataGrid("instance");
+                        if (dataGridAttachment) {
+                            console.log("Resetting data source...");
+                            dataGridAttachment.option("dataSource", []);
+                        }
+                    }
+                
+                    const { roomCapacity, remainingCapacity } = validateBooking();
+                    form.option('items', [
                         {
                             itemType: 'group',
                             colCount: 1,
@@ -498,7 +511,6 @@ $(function () {
                                         },
                                         valueExpr: 'id',
                                         value: appointmentData.ghm_room_id || null,
-                                        // onValueChanged: validateBooking()
                                     }
                                 },
                                 {
@@ -624,14 +636,15 @@ $(function () {
                         },
                         {
                             itemType: 'group',
-                            caption: 'Supporting Doc',
+                            caption: 'Supporting Document',
                             colSpan: 2,
-                            items: [                                
+                            items: [
                                 {
                                     itemType: 'simple',
-                                    template: function(data, container) {
-                                        var supporting = $("<div id='formattachment'>").dxDataGrid({    
-                                            dataSource: storewithmodule('attachmentrequest',modelclass,reqid),
+                                    name: "supportingDocument",
+                                    template: function (data, container) {
+                                        var supporting = $("<div id='formattachment'>").dxDataGrid({
+                                            dataSource: storewithmodule('attachmentrequest', modelclass, reqid),
                                             allowColumnReordering: true,
                                             allowColumnResizing: true,
                                             columnsAutoWidth: true,
@@ -647,22 +660,35 @@ $(function () {
                                                 placeholder: 'Search...',
                                             },
                                             editing: {
-                                                useIcons:true,
+                                                useIcons: true,
                                                 mode: "popup",
-                                                // allowAdding: (((isMine == 1 || isPIC == 1) && mode == 'view') ? true : (isMine == 1) && mode == 'edit' || mode == 'add' ) ? true : (admin == 1 ? true : false),
-                                                // allowUpdating: (((isMine == 1 || isPIC == 1) && mode == 'view') ? true : (isMine == 1) && mode == 'edit' || mode == 'add' ) ? true : (admin == 1 ? true : false),
-                                                // allowDeleting: (((isMine == 1 || isPIC == 1) && mode == 'view') ? true : (isMine == 1) && mode == 'edit' || mode == 'add' ) ? true : (admin == 1 ? true : false),
+                                                allowAdding: true,
+                                                allowUpdating: true,
+                                                allowDeleting: true,
                                             },
                                             paging: { enabled: true, pageSize: 10 },
                                             columns: [
-                                                { 
+                                                {
                                                     caption: 'Attachment',
                                                     dataField: "path",
                                                     allowFiltering: false,
                                                     allowSorting: false,
                                                     cellTemplate: cellTemplate,
                                                     editCellTemplate: editCellTemplate,
-                                                    validationRules: [{ type: "required" }]
+                                                    validationRules: [
+                                                        {
+                                                            type: "custom",
+                                                            validationCallback: function (params) {
+                                                                let formData = form.option("formData");
+                                                                let hasGuestOrFamily =
+                                                                    (formData.guest && formData.guest.length > 0) ||
+                                                                    (formData.family && formData.family.length > 0);
+                
+                                                                return !hasGuestOrFamily || (params.value && params.value.length > 0);
+                                                            },
+                                                            message: "Attachment is required when Guest or Family is selected."
+                                                        }
+                                                    ]
                                                 },
                                                 {
                                                     dataField: "remarks"
@@ -674,43 +700,42 @@ $(function () {
                                                 excelFilterEnabled: true,
                                                 allowExportSelectedData: true
                                             },
-                                            onInitialized: function(e) {
+                                            onInitialized: function (e) {
                                                 dataGridAttachment = e.component;
                                             },
-                                            onContentReady: function(e){
+                                            onContentReady: function (e) {
                                                 moveEditColumnToLeft(e.component);
                                             },
-                                            onInitNewRow : function(e) {
-                                            },
-                                            onToolbarPreparing: function(e) {
-                                                e.toolbarOptions.items.unshift({						
+                                            onToolbarPreparing: function (e) {
+                                                e.toolbarOptions.items.unshift({
                                                     location: "after",
                                                     widget: "dxButton",
                                                     options: {
                                                         hint: "Refresh Data",
                                                         icon: "refresh",
-                                                        onClick: function() {
+                                                        onClick: function () {
                                                             dataGridAttachment.refresh();
                                                         }
                                                     }
-                                                })
+                                                });
                                             },
-                                            onDataErrorOccurred: function(e) {
-                                                // Menampilkan pesan kesalahan
-                                                console.log("Terjadi kesalahan saat memuat data (2):", e.error.message);
-                                        
-                                                // Memuat ulang DataGrid
+                                            onDataErrorOccurred: function (e) {
+                                                console.log("Error loading data:", e.error.message);
                                                 dataGridAttachment.refresh();
                                             }
-                                        })
-                    
+                                        });
+                
                                         return supporting;
-                                    }                                        
-                                } 
-                                // : null
-                            ].filter(Boolean) // Menghapus item null dari array
-                        }                                         
+                                    }
+                                }
+                            ]
+                        }
                     ]);
+                    form.on("fieldDataChanged", function (e) {
+                        if (e.dataField === "guest" || e.dataField === "family") {
+                            validateBooking();
+                        }
+                    });
                 },
                 onAppointmentAdding: async function (e) {
                     const appointmentData = e.appointmentData;
@@ -719,8 +744,9 @@ $(function () {
                     let familyCount = safeArray(appointmentData.family).length;
                     let employeeCount = safeArray(appointmentData.employee).length;
                     let totalNewGuests = guestCount + familyCount + employeeCount;
-                    if (totalNewGuests < 1) {   
-                        DevExpress.ui.notify({                           
+                
+                    if (totalNewGuests < 1) {
+                        DevExpress.ui.notify({
                             type: "error",
                             displayTime: 3000,
                             contentTemplate: (e) => {
@@ -735,6 +761,7 @@ $(function () {
                         e.cancel = true;
                         return;
                     }
+                
                     let selectedRoom = appointmentData.ghm_room_id;
                     let roomData = roomsWithLocations.find(room => room.id === selectedRoom);
                     if (!roomData) {
@@ -742,11 +769,13 @@ $(function () {
                         e.cancel = true;
                         return;
                     }
+                
+                
                     let sector = roomData.sector;
                     let bookingData = await loadNewData();
                     let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;
                     let dailyGuestCount = await getTotalGuestsPerDay(
-                        bookingData.filter(b => b.requestStatus != 4 && b.requestStatus != 0 && b.requestStatus != 2), 
+                        bookingData.filter(b => b.requestStatus != 4 && b.requestStatus != 0 && b.requestStatus != 2 && b.requestStatus != 1),
                         selectedRoom,
                         appointmentData.startDate,
                         appointmentData.endDate
@@ -764,10 +793,11 @@ $(function () {
                             icon: 'error',
                             confirmButtonText: 'OK',
                         });
-                        e.cancel = true;        
+                        e.cancel = true;
                         loadData();
                         return;
-                        }
+                    }
+                
                     Swal.fire({
                         title: 'What do you want to do?',
                         text: 'Choose an option for this booking',
@@ -793,7 +823,6 @@ $(function () {
                             }).then(function () {
                                 loadData();
                             });
-                            //fetch
                         } else {
                             sendRequest(apiurl + "/" + modname, "POST", {
                                 requestStatus: requestStatus,
@@ -825,9 +854,8 @@ $(function () {
                                             Swal.fire({
                                                 icon: 'success',
                                                 title: 'Saved',
-                                                text: 'The submission has been submited.',
+                                                text: 'The submission has been submitted.',
                                             });
-                                            
                                         }
                                     });
                                 }
@@ -851,7 +879,7 @@ $(function () {
                     let bookingData = await loadNewData();
                     let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;                    
                     let dailyGuestCount = await getTotalGuestsPerDay(
-                        bookingData.filter(b => b.requestStatus != 4 && b.requestStatus != 0 && b.requestStatus != 2),
+                        bookingData.filter(b => b.requestStatus != 4 && b.requestStatus != 0 && b.requestStatus != 2 && b.requestStatus != 1),
                         selectedRoom,
                         appointmentData.startDate,
                         appointmentData.endDate
@@ -979,69 +1007,59 @@ $(function () {
         let buttonElement = document.createElement("div");
         buttonElement.classList.add("retryButton");
         let retryButton = $(buttonElement).dxButton({
-          text: "Retry",
-          visible: false,
-          onClick: function() {
-            // The retry UI/API is not implemented. Use a private API as shown at T611719.
-            for (var i = 0; i < fileUploader._files.length; i++) {
-              delete fileUploader._files[i].uploadStarted;
+            text: "Retry",
+            visible: false,
+            onClick: function() {
+                // The retry UI/API is not implemented. Use a private API as shown at T611719.
+                for (var i = 0; i < fileUploader._files.length; i++) {
+                    delete fileUploader._files[i].uploadStarted;
+                }
+                fileUploader.upload();
             }
-            fileUploader.upload();
-          }
         }).dxButton("instance");
     
         $path = "";
         $adafile = "";
         let fileUploaderElement = document.createElement("div");
         let fileUploader = $(fileUploaderElement).dxFileUploader({
-          multiple: false,
-          accept: ".pptx,.ppt,.docx,.pdf,.xlsx,.csv,.png,.jpg,.jpeg,.zip",
-          uploadMode: "instantly",
-          name: "myFile",
-          uploadUrl: apiurl + "/upload-berkas/"+modname,
-          onValueChanged: function(e) {
-            let reader = new FileReader();
-            reader.onload = function(args) {
-              imageElement.setAttribute('src', args.target.result);
+            multiple: false,
+            accept: ".pptx,.ppt,.docx,.pdf,.xlsx,.csv,.png,.jpg,.jpeg,.zip",
+            uploadMode: "instantly",
+            name: "myFile",
+            uploadUrl: apiurl + "/upload-berkas/" + modname,
+            onValueChanged: function(e) {
+                let reader = new FileReader();
+                reader.onload = function(args) {
+                    imageElement.setAttribute('src', args.target.result);
+                }
+                reader.readAsDataURL(e.value[0]);
+            },
+            onUploaded: function(e) {
+                let path = e.request.response;
+    
+                const unsafeCharacters = /[#"%<>\\^`{|}]/g;
+                let unsafeFound = path.match(unsafeCharacters);
+    
+                if (unsafeFound) {
+                    let unsafeCharactersString = unsafeFound.join(', ');
+                    DevExpress.ui.dialog.alert(
+                        `The file name contains these unsafe characters: ${unsafeCharactersString}. Please rename the file to continue.`,
+                        "error"
+                    );
+                    path = "";
+                    retryButton.option("visible", true);
+                } else {
+                    cellInfo.setValue(e.request.responseText);
+                    retryButton.option("visible", false);
+                }
+            },
+            onUploadError: function(e) {
+                $path = "";
+                DevExpress.ui.notify(e.request.response, "error");
             }
-            reader.readAsDataURL(e.value[0]); // convert to base64 string
-          },
-          onUploaded: function(e){
-           
-            let path = e.request.response;
-    
-            const unsafeCharacters = /[#"%<>\\^`{|}]/g;
-            let unsafeFound = path.match(unsafeCharacters);
-    
-            if (unsafeFound) {
-                let unsafeCharactersString = unsafeFound.join(', ');
-                DevExpress.ui.dialog.alert(
-                    `The file name contains these unsafe characters: ${unsafeCharactersString}. Please rename the file to continue.`,
-                    "error"
-                );
-            
-                path = "";
-                retryButton.option("visible", true);
-            } else {
-                cellInfo.setValue(e.request.responseText);
-                retryButton.option("visible", false);
-            }
-    
-          },
-          onUploadError: function(e){
-              $path = "";
-              DevExpress.ui.notify(e.request.response,"error");
-          }
         }).dxFileUploader("instance");
-      
-        // let imageElement = document.createElement("img");
-        //     imageElement.classList.add("uploadedImage");
-        //     imageElement.setAttribute('src', "upload/" +cellInfo.value);
-        //     imageElement.setAttribute('height', "50");
-            
-        //     cellElement.append(imageElement);
-            cellElement.append(fileUploaderElement);
-            cellElement.append(buttonElement);
-      
-      }
+    
+        cellElement.append(fileUploaderElement);
+        cellElement.append(buttonElement);
+    }
 });
