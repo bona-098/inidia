@@ -206,7 +206,6 @@ $(function () {
             width: 80 
         });
     }
-    
     function updateScheduler(location, roomId) {
         let dataSource = roomsWithLocations.filter(emp => emp.location === location);
         if (roomId) {
@@ -770,12 +769,31 @@ $(function () {
                         return;
                     }
                 
+                    // Check if supporting document is required
+                    // let hasGuestOrFamily = guestCount > 0 || familyCount > 0;
+                    // let supportingDocumentPresent = appointmentData.supportingDocument && appointmentData.supportingDocument.length > 0;
+                    // if (hasGuestOrFamily && !supportingDocumentPresent) {
+                    //     DevExpress.ui.notify({
+                    //         type: "error",
+                    //         displayTime: 3000,
+                    //         contentTemplate: (e) => {
+                    //             e.append(`
+                    //                 <div style="white-space: pre-line;">
+                    //                 Supporting Document is required when Guest or Family is selected.\n
+                    //                 Dokumen Pendukung diperlukan ketika Tamu atau Keluarga dipilih.\n
+                    //                 </div>
+                    //             `);
+                    //         }
+                    //     });
+                    //     e.cancel = true;
+                    //     return;
+                    // }
                 
                     let sector = roomData.sector;
                     let bookingData = await loadNewData();
                     let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;
                     let dailyGuestCount = await getTotalGuestsPerDay(
-                        bookingData.filter(b => b.requestStatus != 4 && b.requestStatus != 0 && b.requestStatus != 2 && b.requestStatus != 1),
+                        bookingData.filter(b => b.requestStatus != 4 && b.requestStatus != 0 && b.requestStatus != 2),
                         selectedRoom,
                         appointmentData.startDate,
                         appointmentData.endDate
@@ -879,7 +897,7 @@ $(function () {
                     let bookingData = await loadNewData();
                     let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;                    
                     let dailyGuestCount = await getTotalGuestsPerDay(
-                        bookingData.filter(b => b.requestStatus != 4 && b.requestStatus != 0 && b.requestStatus != 2 && b.requestStatus != 1),
+                        bookingData.filter(b => b.requestStatus != 4 && b.requestStatus != 0 && b.requestStatus != 2),
                         selectedRoom,
                         appointmentData.startDate,
                         appointmentData.endDate
