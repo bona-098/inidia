@@ -1,7 +1,18 @@
-"startDate": "2025-03-30 10:00:00",
-        "submittedDate": "2025-03-11 17:00:06",
-        "time_left": "16:16:59:54"
-    }
+DB::raw("CASE 
+            WHEN tbl_approverListHistory.approvalDate >= DATEADD(DAY, -2, request_ghm.startDate) 
+            THEN '0:00:00:00'
+            ELSE 
+                CASE 
+                    WHEN DATEDIFF(SECOND, DATEADD(DAY, -2, request_ghm.startDate), tbl_approverListHistory.approvalDate) < 0 
+                    THEN '-' + 
+                        CAST(ABS(DATEDIFF(SECOND, DATEADD(DAY, -2, request_ghm.startDate), tbl_approverListHistory.approvalDate)) / 86400 AS VARCHAR) + ':' +
+                        FORMAT(DATEADD(SECOND, ABS(DATEDIFF(SECOND, DATEADD(DAY, -2, request_ghm.startDate), tbl_approverListHistory.approvalDate)) % 86400, 0), 'HH:mm:ss')
+                    ELSE 
+                        CAST(DATEDIFF(SECOND, DATEADD(DAY, -2, request_ghm.startDate), tbl_approverListHistory.approvalDate) / 86400 AS VARCHAR) + ':' +
+                        FORMAT(DATEADD(SECOND, DATEDIFF(SECOND, DATEADD(DAY, -2, request_ghm.startDate), tbl_approverListHistory.approvalDate) % 86400, 0), 'HH:mm:ss')
+                END
+        END AS time_left")
+
 
 
 <?php
