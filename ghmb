@@ -244,8 +244,9 @@ $(function () {
                 endDayHour: 23,
                 colorExpr: "color",
                 showAllDayPanel: false,
-                height: 710,
-                onCellClick: async function(e) {
+                height: 710,                
+                onCellDblClick: async function(e) {
+                    console.log("apooint", appointmentData);
                     let today = new Date();
                     today.setHours(0, 0, 0, 0); // Hanya ambil tanggal tanpa waktu
                     let cellDate = new Date(e.cellData.startDate);
@@ -266,9 +267,14 @@ $(function () {
                         });
                         return;
                     }
-
+                
                     // Lakukan POST request untuk mendapatkan ID
-                    let response = await sendRequest(apiurl + "/"+modname, "POST", {requestStatus:0});
+                    let response = await sendRequest(apiurl + "/"+modname, "POST", {
+                        requestStatus: 0,
+                        ghm_room_id: e.cellData.groups.ghm_room_id,
+                        startDate: e.cellData.startDate,
+                        endDate: e.cellData.endDate
+                    });
                     if(response.status === 'success') {
                         const reqid = response.data.id;
                         
