@@ -9,29 +9,6 @@ function serializeToJSON(employeeIds) {
 function deserializeFromJSON(jsonString) {
     return JSON.parse(jsonString);
 }
-function validateSupportingDocument() {
-    let formData = form.option("formData");
-    let hasGuestOrFamily = (formData.guest && formData.guest.length > 0) || (formData.family && formData.family.length > 0);
-    form.itemOption("supportingDocument", "isRequired", hasGuestOrFamily);
-    let warningMessage = $("#supportingDocumentWarning");
-    
-    if (hasGuestOrFamily) {
-        if (warningMessage.length === 0) {
-            $("#formattachment").after(
-                "<div id='supportingDocumentWarning' style='color: red; margin-top: 5px;'>* Dokumen pendukung diperlukan untuk tamu atau keluarga.</div>"
-            );
-        }
-    } else {
-        warningMessage.remove();
-    }
-
-    let supportingDocument = form.getEditor("supportingDocument")?.option("value");
-    if (hasGuestOrFamily && (!supportingDocument || supportingDocument.length === 0)) {
-        DevExpress.ui.notify("Dokumen pendukung harus disertakan untuk tamu atau keluarga!", "error", 2000);
-        return false;
-    }
-    return true;
-}
 $(function () {
     function submitFormData() {
         if (dataSubmitted) return;
@@ -41,12 +18,13 @@ $(function () {
         guestField.value = (guestField.value.split(',').map(name => name.trim()));
         const familyField = formData.find(field => field.name === 'family');
         familyField.value = serializeToJSON(familyField.value.split(',').map(name => name.trim()));
-        // Validasi booking sebelum mengirimkan data
-        if (!validateBooking() || !validateSupportingDocument()) {
-            dataSubmitted = false;
-            return;
+        // Tambahkan logika untuk mendukung dokumen pendukung
+        const supportingDocumentField = formData.find(field => field.name === 'supportingDocument');
+        if (supportingDocumentField && supportingDocumentField.value.length > 0) {
+            formData.push({ name: 'supportingDocument', value: supportingDocumentField.value });
         }
-        sendRequest(apiurl + "/" + modname, "POST")
+
+        sendRequest(apiurl + "/" + modname, "POST", formData)
         .then(function (response) {
             if (response.status === 'success') {
                 alert('Booking created successfully!');
@@ -59,7 +37,7 @@ $(function () {
         }).finally(function () {
             dataSubmitted = false;
         });
-    }    
+    }
     $('#booking-form').on('submit', function (event) {
         event.preventDefault();
         submitFormData();
@@ -94,6 +72,7 @@ $(function () {
         .then(response => response.json())
         .then(response => {
             bookingData = response.booking;    
+            console.log("Data New Booking Loaded:", bookingData);
             return response.booking;
         }).catch(function (error) {
             alert('Error: ' + error.responseText);
@@ -109,6 +88,7 @@ $(function () {
         .then(response => response.json())
         .then(response => {
             let data = response.booking;    
+            console.log("Data Booking Loaded:", data);
             schedulerInstance.option("dataSource", data);
             schedulerInstance.repaint();
         }).catch(function (error) {
@@ -204,6 +184,7 @@ $(function () {
         let dailyGuestCount = 0; 
         appointments.forEach(appointment => {
         if (appointment.requestStatus == 4) {
+            console.log(`Skipping rejected booking ID: ${appointment.id}`);
             return;
         }   
             let bookingStart = new Date(startDate);
@@ -220,6 +201,7 @@ $(function () {
                     let totalGuests = guestCount + familyCount + employeeCount;
 
                     dailyGuestCount = (dailyGuestCount || 0) + totalGuests;
+                    console.log("dailyGuestCount", dailyGuestCount);
             }
         });
         return dailyGuestCount;
@@ -243,12 +225,34 @@ $(function () {
                 views: ['month'],
                 currentView: 'month',
                 currentDate: new Date(),
+                min: new Date(),
                 firstDayOfWeek: 1,
                 startDayHour: 8,
                 endDayHour: 23,
                 colorExpr: "color",
                 showAllDayPanel: false,
                 height: 710,
+                onCellClick: function(e) {
+                    let today = new Date();
+                    today.setHours(0, 0, 0, 0); // Hanya ambil tanggal tanpa waktu
+                    let cellDate = new Date(e.cellData.startDate);
+                    
+                    if (cellDate < today) {
+                        e.cancel = true;
+                        DevExpress.ui.notify({
+                            type: "warning",
+                            displayTime: 3000,
+                            contentTemplate: (e) => {
+                                e.append(`
+                                    <div style="white-space: pre-line;">
+                                    Tidak bisa memilih tanggal yang sudah lewat!\n
+                                    You cannot select a past date!!\n
+                                    </div>
+                                `);
+                            }
+                        });
+                    }
+                },
                 groups: ['ghm_room_id'],
                 resources: [
                     {
@@ -472,9 +476,11 @@ $(function () {
                     }
                 
                     function cleanupForm() {
+                        console.log("Cleaning up form...");
                         form.option("formData", {});
                         let dataGridAttachment = $("#formattachment").dxDataGrid("instance");
                         if (dataGridAttachment) {
+                            console.log("Resetting data source...");
                             dataGridAttachment.option("dataSource", []);
                         }
                     }
@@ -741,6 +747,7 @@ $(function () {
                                                 });
                                             },
                                             onDataErrorOccurred: function (e) {
+                                                console.log("Error loading data:", e.error.message);
                                                 dataGridAttachment.refresh();
                                             }
                                         });
@@ -788,7 +795,8 @@ $(function () {
                         DevExpress.ui.notify("Room not Found", "error", 3000);
                         e.cancel = true;
                         return;
-                    }                
+                    }
+                
                     let sector = roomData.sector;
                     let bookingData = await loadNewData();
                     let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;
@@ -889,7 +897,18 @@ $(function () {
                     const oldAppointmentData = e.oldData;
                     const currentStatus = oldAppointmentData.requestStatus;
                     if (!["0", "1", "2"].includes(currentStatus)) {
-                        DevExpress.ui.notify("Booking dengan status ini tidak dapat diperbarui!", "error", 3000);
+                        DevExpress.ui.notify({
+                            type: "error",
+                            displayTime: 3000,
+                            contentTemplate: (e) => {
+                                e.append(`
+                                    <div style="white-space: pre-line;">
+                                    THis booking status cannot be updated!\n
+                                    Booking dengan status ini tidak dapat diperbarui!\n
+                                    </div>
+                                `);
+                            }
+                        });
                         e.cancel = true;
                         return;
                     }
@@ -1025,59 +1044,69 @@ $(function () {
         let buttonElement = document.createElement("div");
         buttonElement.classList.add("retryButton");
         let retryButton = $(buttonElement).dxButton({
-            text: "Retry",
-            visible: false,
-            onClick: function() {
-                // The retry UI/API is not implemented. Use a private API as shown at T611719.
-                for (var i = 0; i < fileUploader._files.length; i++) {
-                    delete fileUploader._files[i].uploadStarted;
-                }
-                fileUploader.upload();
+          text: "Retry",
+          visible: false,
+          onClick: function() {
+            // The retry UI/API is not implemented. Use a private API as shown at T611719.
+            for (var i = 0; i < fileUploader._files.length; i++) {
+              delete fileUploader._files[i].uploadStarted;
             }
+            fileUploader.upload();
+          }
         }).dxButton("instance");
     
         $path = "";
         $adafile = "";
         let fileUploaderElement = document.createElement("div");
         let fileUploader = $(fileUploaderElement).dxFileUploader({
-            multiple: false,
-            accept: ".pptx,.ppt,.docx,.pdf,.xlsx,.csv,.png,.jpg,.jpeg,.zip",
-            uploadMode: "instantly",
-            name: "myFile",
-            uploadUrl: apiurl + "/upload-berkas/" + modname,
-            onValueChanged: function(e) {
-                let reader = new FileReader();
-                reader.onload = function(args) {
-                    imageElement.setAttribute('src', args.target.result);
-                }
-                reader.readAsDataURL(e.value[0]);
-            },
-            onUploaded: function(e) {
-                let path = e.request.response;
-    
-                const unsafeCharacters = /[#"%<>\\^`{|}]/g;
-                let unsafeFound = path.match(unsafeCharacters);
-    
-                if (unsafeFound) {
-                    let unsafeCharactersString = unsafeFound.join(', ');
-                    DevExpress.ui.dialog.alert(
-                        `The file name contains these unsafe characters: ${unsafeCharactersString}. Please rename the file to continue.`,
-                        "error"
-                    );
-                    path = "";
-                    retryButton.option("visible", true);
-                } else {
-                    cellInfo.setValue(e.request.responseText);
-                    retryButton.option("visible", false);
-                }
-            },
-            onUploadError: function(e) {
-                $path = "";
-                DevExpress.ui.notify(e.request.response, "error");
+          multiple: false,
+          accept: ".pptx,.ppt,.docx,.pdf,.xlsx,.csv,.png,.jpg,.jpeg,.zip",
+          uploadMode: "instantly",
+          name: "myFile",
+          uploadUrl: apiurl + "/upload-berkas/"+modname,
+          onValueChanged: function(e) {
+            let reader = new FileReader();
+            reader.onload = function(args) {
+              imageElement.setAttribute('src', args.target.result);
             }
-        }).dxFileUploader("instance");
+            reader.readAsDataURL(e.value[0]); // convert to base64 string
+          },
+          onUploaded: function(e){
+           
+            let path = e.request.response;
     
-        cellElement.append(fileUploaderElement);
-        cellElement.append(buttonElement);
+            const unsafeCharacters = /[#"%<>\\^`{|}]/g;
+            let unsafeFound = path.match(unsafeCharacters);
+    
+            if (unsafeFound) {
+                let unsafeCharactersString = unsafeFound.join(', ');
+                DevExpress.ui.dialog.alert(
+                    `The file name contains these unsafe characters: ${unsafeCharactersString}. Please rename the file to continue.`,
+                    "error"
+                );
+            
+                path = "";
+                retryButton.option("visible", true);
+            } else {
+                cellInfo.setValue(e.request.responseText);
+                retryButton.option("visible", false);
+            }
+    
+          },
+          onUploadError: function(e){
+              $path = "";
+              DevExpress.ui.notify(e.request.response,"error");
+          }
+        }).dxFileUploader("instance");
+      
+        // let imageElement = document.createElement("img");
+        //     imageElement.classList.add("uploadedImage");
+        //     imageElement.setAttribute('src', "upload/" +cellInfo.value);
+        //     imageElement.setAttribute('height', "50");
+            
+        //     cellElement.append(imageElement);
+            cellElement.append(fileUploaderElement);
+            cellElement.append(buttonElement);
+      
     }
 });
