@@ -419,12 +419,12 @@ $(function () {
                     e.popup.option({
                         width: 700,
                         height: 800,
-                        onHiding: function () {
-                            cleanupForm();
-                        },
-                        onHidden: function () {
-                            cleanupForm();
-                        }
+                        // onHiding: function () {
+                        //     cleanupForm();
+                        // },
+                        // onHidden: function () {
+                        //     cleanupForm();
+                        // }
                     });
                 
                     const form = e.form;
@@ -475,15 +475,15 @@ $(function () {
                         return { roomCapacity, remainingCapacity, totalBooked };
                     }
                 
-                    function cleanupForm() {
-                        console.log("Cleaning up form...");
-                        form.option("formData", {});
-                        let dataGridAttachment = $("#formattachment").dxDataGrid("instance");
-                        if (dataGridAttachment) {
-                            console.log("Resetting data source...");
-                            dataGridAttachment.option("dataSource", []);
-                        }
-                    }
+                    // function cleanupForm() {
+                    //     console.log("Cleaning up form...");
+                    //     form.option("formData", {});
+                    //     let dataGridAttachment = $("#formattachment").dxDataGrid("instance");
+                    //     if (dataGridAttachment) {
+                    //         console.log("Resetting data source...");
+                    //         dataGridAttachment.option("dataSource", []);
+                    //     }
+                    // }
                 
                     const { roomCapacity, remainingCapacity } = validateBooking();
                     form.option('items', [
@@ -801,7 +801,7 @@ $(function () {
                     let bookingData = await loadNewData();
                     let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;
                     let dailyGuestCount = await getTotalGuestsPerDay(
-                        bookingData.filter(b => b.requestStatus != 4 && b.requestStatus != 0 && b.requestStatus != 2),
+                        bookingData.filter(b => b.requestStatus != 4 && b.requestStatus != 0 && b.requestStatus != 2 && b.requestStatus != 1),
                         selectedRoom,
                         appointmentData.startDate,
                         appointmentData.endDate
@@ -916,7 +916,7 @@ $(function () {
                     let bookingData = await loadNewData();
                     let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;                    
                     let dailyGuestCount = await getTotalGuestsPerDay(
-                        bookingData.filter(b => b.requestStatus != 4 && b.requestStatus != 0 && b.requestStatus != 2),
+                        bookingData.filter(b => b.requestStatus != 4 && b.requestStatus != 0 && b.requestStatus != 2 && b.requestStatus != 1),
                         selectedRoom,
                         appointmentData.startDate,
                         appointmentData.endDate
@@ -1098,13 +1098,6 @@ $(function () {
               DevExpress.ui.notify(e.request.response,"error");
           }
         }).dxFileUploader("instance");
-      
-        // let imageElement = document.createElement("img");
-        //     imageElement.classList.add("uploadedImage");
-        //     imageElement.setAttribute('src', "upload/" +cellInfo.value);
-        //     imageElement.setAttribute('height', "50");
-            
-        //     cellElement.append(imageElement);
             cellElement.append(fileUploaderElement);
             cellElement.append(buttonElement);
       
