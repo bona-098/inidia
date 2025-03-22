@@ -38,6 +38,19 @@ $(function () {
             dataSubmitted = false;
         });
     }
+    function submitIdToDatabase(id) {
+        return sendRequest(apiurl + "/submit-id", "POST", { id: id })
+            .then(function (response) {
+                if (response.status === 'success') {
+                    console.log('ID submitted successfully');
+                } else {
+                    console.log('Error submitting ID: ' + response.message);
+                }
+            })
+            .catch(function (error) {
+                console.log('Error submitting ID: ' + error.responseText);
+            });
+    }
     $('#booking-form').on('submit', function (event) {
         event.preventDefault();
         submitFormData();
@@ -429,7 +442,7 @@ $(function () {
                 
                     const form = e.form;
                     const appointmentData = e.appointmentData;
-                    const reqid = (appointmentData.id) || 0;
+                    let reqid = (appointmentData.id) || 0;
                     let selectedRoom = appointmentData.ghm_room_id || null;
                     let newStartDate = new Date(appointmentData.startDate);
                     let newEndDate = new Date(appointmentData.endDate);
@@ -893,6 +906,16 @@ $(function () {
                     });
                 },
                 onAppointmentUpdating: async function (e) {
+                    $('#btnadd').on('click',function(){
+                        sendRequest(apiurl + "/"+modname, "POST", {requestStatus:0}).then(function(response){
+                            const reqid = response.data.id;
+                            const mode = 'add';
+                            popup.option({
+                                contentTemplate: () => popupContentTemplate(reqid),
+                            });
+                            popup.show();
+                        });
+                    })
                     const appointmentData = e.newData;
                     const oldAppointmentData = e.oldData;
                     const currentStatus = oldAppointmentData.requestStatus;
