@@ -245,7 +245,7 @@ $(function () {
                 colorExpr: "color",
                 showAllDayPanel: false,
                 height: 710,
-                onCellClick: function(e) {
+                onCellClick: async function(e) {
                     let today = new Date();
                     today.setHours(0, 0, 0, 0); // Hanya ambil tanggal tanpa waktu
                     let cellDate = new Date(e.cellData.startDate);
@@ -260,6 +260,32 @@ $(function () {
                                     <div style="white-space: pre-line;">
                                     Tidak bisa memilih tanggal yang sudah lewat!\n
                                     You cannot select a past date!!\n
+                                    </div>
+                                `);
+                            }
+                        });
+                        return;
+                    }
+
+                    // Lakukan POST request untuk mendapatkan ID
+                    let response = await sendRequest(apiurl + "/"+modname, "POST", {requestStatus:0});
+                    if(response.status === 'success') {
+                        const reqid = response.data.id;
+                        
+                        // Panggil popup dengan ID yang baru didapatkan
+                        popup.option({
+                            contentTemplate: () => popupContentTemplate(reqid),
+                        });
+                        popup.show();
+                    } else {
+                        DevExpress.ui.notify({
+                            type: "error",
+                            displayTime: 3000,
+                            contentTemplate: (e) => {
+                                e.append(`
+                                    <div style="white-space: pre-line;">
+                                    Gagal mendapatkan ID!\n
+                                    Failed to get ID!!\n
                                     </div>
                                 `);
                             }
