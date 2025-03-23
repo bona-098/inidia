@@ -246,11 +246,11 @@ $(function () {
                 showAllDayPanel: false,
                 height: 710,          
                 onCellClick: async function(e) {
-                    console.log("Double click event triggered", appointmentData);
+                    // console.log("Double click event triggered", appointmentData);
                     let today = new Date();
                     today.setHours(0, 0, 0, 0); // Hanya ambil tanggal tanpa waktu
                     let cellDate = new Date(e.cellData.startDate);
-            
+                    
                     if (cellDate < today) {
                         e.cancel = true;
                         DevExpress.ui.notify({
@@ -268,18 +268,17 @@ $(function () {
                         return;
                     }
             
-                    // Ambil data room
-                    let roomData = roomsWithLocations.find(room => room.id === e.cellData.groups.ghm_room_id);
+                    // Lakukan POST request untuk mendapatkan ID
+                    let appointmentData = booking;
+                    let selectedRoom = appointmentData.ghm_room_id || null;
+                    let roomData = roomsWithLocations.find(room => room.id === selectedRoom);
                     if (!roomData) {
                         DevExpress.ui.notify("Room not Found", "error", 3000);
+                        e.cancel = true;
                         return;
                     }
-            
-                    // Pastikan sektor diambil dengan benar
+                
                     let sector = roomData.sector;
-                    console.log("Sector:", sector); // Tambahkan log ini untuk memastikan sektor diambil dengan benar
-            
-                    // Lakukan POST request untuk mendapatkan ID
                     let response = await sendRequest(apiurl + "/"+modname, "POST", {
                         requestStatus: 0,
                         ghm_room_id: e.cellData.groups.ghm_room_id,
@@ -290,9 +289,12 @@ $(function () {
                     });
                     if(response.status === 'success') {
                         const reqid = response.data.id;
-            
+                        
                         // Panggil popup dengan ID yang baru didapatkan
-                        e.component.showAppointmentPopup({ id: reqid }, true);
+                        popup.option({
+                            contentTemplate: () => popupContentTemplate(reqid),
+                        });
+                        popup.show();
                     } else {
                         DevExpress.ui.notify({
                             type: "error",
@@ -471,12 +473,19 @@ $(function () {
                     }
                 },  
                 onAppointmentFormOpening: function (e) {
-                    const form = e.form;
-                    const appointmentData = e.appointmentData;
                     e.popup.option({
                         width: 700,
                         height: 800,
+                        // onHiding: function () {
+                        //     cleanupForm();
+                        // },
+                        // onHidden: function () {
+                        //     cleanupForm();
+                        // }
                     });
+                
+                    const form = e.form;
+                    const appointmentData = e.appointmentData;
                     let reqid = (appointmentData.id) || 0;
                     let selectedRoom = appointmentData.ghm_room_id || null;
                     let newStartDate = new Date(appointmentData.startDate);
@@ -522,6 +531,16 @@ $(function () {
                         }
                         return { roomCapacity, remainingCapacity, totalBooked };
                     }
+                
+                    // function cleanupForm() {
+                    //     console.log("Cleaning up form...");
+                    //     form.option("formData", {});
+                    //     let dataGridAttachment = $("#formattachment").dxDataGrid("instance");
+                    //     if (dataGridAttachment) {
+                    //         console.log("Resetting data source...");
+                    //         dataGridAttachment.option("dataSource", []);
+                    //     }
+                    // }
                 
                     const { roomCapacity, remainingCapacity } = validateBooking();
                     form.option('items', [
