@@ -484,31 +484,18 @@ $(function () {
                     }
                 },  
                 onAppointmentFormOpening: function (e) {
+                    loadNewData();
+                    console.log("ancur", loadNewData);
                     e.popup.option({
                         width: 700,
                         height: 800,
                     });
                 
                     const form = e.form;
-                    const appointmentData = e.appointmentData;
-                    // Tambahkan pengecekan untuk e.cellData dan e.cellData.ghm_room_id
-                    if (!e.cellData || !e.cellData.ghm_room_id) {
-                        DevExpress.ui.notify("Room ID is not defined", "error", 3000);
-                        dataSubmitted = false;
-                        return;
-                    }
-
-                    let roomData = roomsWithLocations.find(room => room.id === e.cellData.ghm_room_id);
-                    if (!roomData) {
-                        DevExpress.ui.notify("Room not Found", "error", 3000);
-                        dataSubmitted = false;
-                        return;
-                    }
-                    
-                    let cellDate = new Date(e.cellData.startDate);
+                    const appointmentData = e.appointmentData;                    
                     let reqid = appointmentData.id;
                     if (reqid == null) {
-                        let response = sendRequest(apiurl + "/"+modname, "POST", {
+                        sendRequest(apiurl + "/"+modname, "POST", {
                             requestStatus: 0,
                             ghm_room_id: e.cellData.ghm_room_id,
                             startDate: e.cellData.startDate,
@@ -518,26 +505,6 @@ $(function () {
                             guest: e.cellData.guest || [],
                             family: e.cellData.family || []
                         });
-                        if(response.status === 'success') {
-                            const reqid = response.data.id;
-                            popup.option({
-                                contentTemplate: () => popupContentTemplate(reqid),
-                            });
-                            popup.show();
-                        } else {
-                            DevExpress.ui.notify({
-                                type: "error",
-                                displayTime: 3000,
-                                contentTemplate: (e) => {
-                                    e.append(`
-                                        <div style="white-space: pre-line;">
-                                        Gagal mendapatkan ID!\n
-                                        Failed to get ID!!\n
-                                        </div>
-                                    `);
-                                }
-                            });
-                        }
                         dataSubmitted = false;
                         e.event.preventDefault();
                     }                    
