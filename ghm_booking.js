@@ -503,7 +503,7 @@ $(function () {
                         let startDate = cellData.startDate || appointmentData.startDate;
                         let endDate = cellData.endDate || appointmentData.endDate;
 
-                        if (ghm_room_id && startDate && endDate) { 
+                        if (ghm_room_id && startDate && endDate) {
                             sendRequest(apiurl + "/" + modname, "POST", {
                                 requestStatus: 0,
                                 ghm_room_id: ghm_room_id,
@@ -537,7 +537,7 @@ $(function () {
                         }
 
                         dataSubmitted = false;
-                        if (e.event) { 
+                        if (e.event) {
                             e.event.preventDefault();
                         } else {
                             console.error("event is undefined");
@@ -873,16 +873,6 @@ $(function () {
                     });
                 },
                 onAppointmentAdding: async function (e) {
-                    $('#btnadd').on('click',function(){
-                        sendRequest(apiurl + "/"+modname, "POST", {requestStatus:0}).then(function(response){
-                            const reqid = response.data.id;
-                            const mode = 'add';
-                            popup.option({
-                                contentTemplate: () => popupContentTemplate(reqid),
-                            });
-                            popup.show();
-                        });
-                    })
                     const appointmentData = e.appointmentData;
                     let scheduler = e.component;
                     let guestCount = safeArray(appointmentData.guest).length;
@@ -941,6 +931,7 @@ $(function () {
                         loadData();
                         return;
                     }
+                
                     let reqid = appointmentData.id;
                 
                     Swal.fire({
@@ -955,7 +946,6 @@ $(function () {
                         let requestStatus = 0;
                         if (!result.isConfirmed) {
                             sendRequest(apiurl + "/"+modname+"/"+reqid, "PUT", {
-                            // sendRequest(apiurl + "/" + modname, "POST", {
                                 requestStatus: requestStatus,
                                 text: appointmentData.text,
                                 description: appointmentData.description,
@@ -972,7 +962,6 @@ $(function () {
                             });
                         } else {
                             sendRequest(apiurl + "/"+modname+"/"+reqid, "PUT", {
-                            // sendRequest(apiurl + "/" + modname, "POST", {
                                 requestStatus: requestStatus,
                                 text: appointmentData.text,
                                 description: appointmentData.description,
@@ -990,7 +979,6 @@ $(function () {
                                 let valApprovalType = '';
                                 let valremarks = '';
                                 if (response.status == 'success') {
-                                    const reqid = response.data.id;
                                     console.log("reqid", reqid);
                                     sendRequest(apiurl + "/submissionrequest/" + reqid + "/" + modelclass, "POST", {
                                         requestStatus: 1,
