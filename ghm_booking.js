@@ -276,7 +276,7 @@ $(function () {
                         dataSubmitted = false;
                         return;
                     }
-            
+        
                     let sector = roomData.sector;
                     let response = await sendRequest(apiurl + "/"+modname, "POST", {
                         requestStatus: 0,
@@ -315,74 +315,10 @@ $(function () {
                     // Tambahkan event listener untuk double click pada cell
                     $(e.element).find('.dx-scheduler-date-table-cell').on('dblclick', function(event) {
                         var cellData = e.component.getCellData(event.target);
-            
+        
                         // Panggil fungsi onCellDblClick dengan data cell
                         onCellDblClick(e.component, cellData);
                     });
-                },
-                async function onCellDblClick(component, cellData) {
-                    if (dataSubmitted) return;
-                    dataSubmitted = true;
-                
-                    let today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    let cellDate = new Date(cellData.startDate);
-                    
-                    if (cellDate < today) {
-                        DevExpress.ui.notify({
-                            type: "warning",
-                            displayTime: 3000,
-                            contentTemplate: (e) => {
-                                e.append(`
-                                    <div style="white-space: pre-line;">
-                                    Tidak bisa memilih tanggal yang sudah lewat!\n
-                                    You cannot select a past date!!\n
-                                    </div>
-                                `);
-                            }
-                        });
-                        dataSubmitted = false;
-                        return;
-                    }
-                    let roomData = roomsWithLocations.find(room => room.id === cellData.groups.ghm_room_id);
-                    if (!roomData) {
-                        DevExpress.ui.notify("Room not Found", "error", 3000);
-                        dataSubmitted = false;
-                        return;
-                    }
-                
-                    let sector = roomData.sector;
-                    let response = await sendRequest(apiurl + "/"+modname, "POST", {
-                        requestStatus: 0,
-                        ghm_room_id: cellData.groups.ghm_room_id,
-                        startDate: cellData.startDate,
-                        endDate: cellData.endDate,
-                        sector: sector,
-                        employee: cellData.employee || [],
-                        guest: cellData.guest || [],
-                        family: cellData.family || []
-                    });
-                    if(response.status === 'success') {
-                        const reqid = response.data.id;
-                        popup.option({
-                            contentTemplate: () => popupContentTemplate(reqid),
-                        });
-                        popup.show();
-                    } else {
-                        DevExpress.ui.notify({
-                            type: "error",
-                            displayTime: 3000,
-                            contentTemplate: (e) => {
-                                e.append(`
-                                    <div style="white-space: pre-line;">
-                                    Gagal mendapatkan ID!\n
-                                    Failed to get ID!!\n
-                                    </div>
-                                `);
-                            }
-                        });
-                    }
-                    dataSubmitted = false;
                 },
                 groups: ['ghm_room_id'],
                 resources: [
@@ -547,15 +483,11 @@ $(function () {
                     }
                 },  
                 onAppointmentFormOpening: function (e) {
+                    loadNewData();
+                    console.log("ancur", loadNewData);
                     e.popup.option({
                         width: 700,
                         height: 800,
-                        // onHiding: function () {
-                        //     cleanupForm();
-                        // },
-                        // onHidden: function () {
-                        //     cleanupForm();
-                        // }
                     });
                 
                     const form = e.form;
