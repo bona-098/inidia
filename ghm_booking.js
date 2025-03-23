@@ -1,3 +1,4 @@
+secara logika, harusnya ketika membuka form jika reqid tidak ada maka dilakukan post atau generate data kemudian data yang sudah dipostlah yang akan ditampilkan di form, kenyataan di kodingan saat ini post berhasil ketika form dibuka tapi ketika form di submit yang tersubmit adalah data baru bukan data yang sudah di post sebelumnya saat baru membuka 
 const form = e.form;
                     const appointmentData = e.appointmentData;                    
                     let reqid = appointmentData.id;
