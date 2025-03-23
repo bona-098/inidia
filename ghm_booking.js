@@ -492,7 +492,8 @@ $(function () {
                 
                     const form = e.form;
                     const appointmentData = e.appointmentData;
-                    let reqid = (appointmentData.id) || 0;
+                    let reqid = appointmentData.id;
+                    console.log("req", reqid);
                     let selectedRoom = appointmentData.ghm_room_id || null;
                     let newStartDate = new Date(appointmentData.startDate);
                     let newEndDate = new Date(appointmentData.endDate);
@@ -931,6 +932,7 @@ $(function () {
                                 let valremarks = '';
                                 if (response.status == 'success') {
                                     const reqid = response.data.id;
+                                    // console.log("reqid", reqid);
                                     sendRequest(apiurl + "/submissionrequest/" + reqid + "/" + modelclass, "POST", {
                                         requestStatus: 1,
                                         action: actionForm,
@@ -947,9 +949,6 @@ $(function () {
                                             });
                                         }
                                     });
-                                }
-                                if (response.status === 'success') {
-                                    loadData();
                                 }
                             });
                         }
