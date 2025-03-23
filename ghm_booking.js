@@ -225,40 +225,6 @@ $(function () {
             width: 80 
         });
     }
-    // Fungsi untuk mendapatkan atau membuat ID
-    async function getOrCreateRequestId(cellData, roomData) {
-        try {
-            // Cek apakah ID sudah ada
-            let checkResponse = await sendRequest(apiurl + "/" + modname + "/check", "GET", {
-                ghm_room_id: cellData.groups.ghm_room_id,
-                startDate: cellData.startDate
-            });
-    
-            if (checkResponse.status === 'success' && checkResponse.data.id) {
-                return checkResponse.data.id; // ID sudah ada, langsung pakai
-            }
-    
-            // Jika tidak ada, buat ID baru
-            let postResponse = await sendRequest(apiurl + "/" + modname, "POST", {
-                requestStatus: 0,
-                ghm_room_id: cellData.groups.ghm_room_id,
-                startDate: cellData.startDate,
-                endDate: cellData.endDate,
-                sector: roomData.sector,
-                employee: cellData.employee || [],
-                guest: cellData.guest || [],
-                family: cellData.family || []
-            });
-    
-            if (postResponse.status === 'success') {
-                return postResponse.data.id; // Kembalikan ID yang baru dibuat
-            }
-        } catch (error) {
-            console.error("Error getting or creating ID:", error);
-        }
-    
-        return null; // Jika gagal, kembalikan null
-    }
     function updateScheduler(location, roomId) {
         let dataSource = roomsWithLocations.filter(emp => emp.location === location);
         if (roomId) {
@@ -280,58 +246,78 @@ $(function () {
                 showAllDayPanel: false,
                 height: 710,          
                 onCellClick: async function(e) {
+                    if (dataSubmitted) return;
+                    dataSubmitted = true;
+                    
                     let today = new Date();
-                    today.setHours(0, 0, 0, 0);
+                    today.setHours(0, 0, 0, 0); // Hanya ambil tanggal tanpa waktu
                     let cellDate = new Date(e.cellData.startDate);
                     
                     if (cellDate < today) {
                         e.cancel = true;
-                        DevExpress.ui.notify("Tidak bisa memilih tanggal yang sudah lewat!", "warning", 3000);
+                        DevExpress.ui.notify({
+                            type: "warning",
+                            displayTime: 3000,
+                            contentTemplate: (e) => {
+                                e.append(`
+                                    <div style="white-space: pre-line;">
+                                    Tidak bisa memilih tanggal yang sudah lewat!\n
+                                    You cannot select a past date!!\n
+                                    </div>
+                                `);
+                            }
+                        });
+                        dataSubmitted = false;
                         return;
                     }
-                
                     let roomData = roomsWithLocations.find(room => room.id === e.cellData.groups.ghm_room_id);
                     if (!roomData) {
                         DevExpress.ui.notify("Room not Found", "error", 3000);
+                        dataSubmitted = false;
                         return;
                     }
-                
-                    // Cek atau buat ID dan simpan di cellData
-                    if (!e.cellData.reqid) {
-                        e.cellData.reqid = await getOrCreateRequestId(e.cellData, roomData);
-                    }
-                },
-                
-                onContentReady: function(e) {
-                    let $cells = $(e.element).find('.dx-scheduler-date-table-cell');
-                
-                    // Hapus event listener sebelumnya agar tidak duplikasi
-                    $cells.off('dblclick');
-                
-                    // Tambahkan event listener dblclick
-                    $cells.on('dblclick', async function(event) {
-                        var cellData = e.component.getCellData(event.target);
-                
-                        // Jika ID belum ada, tunggu hingga ID dibuat
-                        if (!cellData.reqid) {
-                            let roomData = roomsWithLocations.find(room => room.id === cellData.groups.ghm_room_id);
-                            if (!roomData) {
-                                DevExpress.ui.notify("Room not Found", "error", 3000);
-                                return;
+        
+                    let sector = roomData.sector;
+                    let response = await sendRequest(apiurl + "/"+modname, "POST", {
+                        requestStatus: 0,
+                        ghm_room_id: e.cellData.groups.ghm_room_id,
+                        startDate: e.cellData.startDate,
+                        endDate: e.cellData.endDate,
+                        sector: sector,
+                        employee: e.cellData.employee || [],
+                        guest: e.cellData.guest || [],
+                        family: e.cellData.family || []
+                    });
+                    if(response.status === 'success') {
+                        const reqid = response.data.id;
+                        popup.option({
+                            contentTemplate: () => popupContentTemplate(reqid),
+                        });
+                        popup.show();
+                    } else {
+                        DevExpress.ui.notify({
+                            type: "error",
+                            displayTime: 3000,
+                            contentTemplate: (e) => {
+                                e.append(`
+                                    <div style="white-space: pre-line;">
+                                    Gagal mendapatkan ID!\n
+                                    Failed to get ID!!\n
+                                    </div>
+                                `);
                             }
-                
-                            cellData.reqid = await getOrCreateRequestId(cellData, roomData);
-                        }
-                
-                        // Setelah ID tersedia, tampilkan popup
-                        if (cellData.reqid) {
-                            popup.option({
-                                contentTemplate: () => popupContentTemplate(cellData.reqid),
-                            });
-                            popup.show();
-                        } else {
-                            DevExpress.ui.notify("Gagal mendapatkan ID!", "error", 3000);
-                        }
+                        });
+                    }
+                    dataSubmitted = false;
+                    e.event.preventDefault();
+                },
+                onContentReady: function(e) {
+                    // Tambahkan event listener untuk double click pada cell
+                    $(e.element).find('.dx-scheduler-date-table-cell').on('dblclick', function(event) {
+                        var cellData = e.component.getCellData(event.target);
+        
+                        // Panggil fungsi onCellDblClick dengan data cell
+                        onCellDblClick(e.component, cellData);
                     });
                 },
                 groups: ['ghm_room_id'],
