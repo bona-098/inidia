@@ -1,138 +1,58 @@
-$(() => {
-  const URL = 'https://js.devexpress.com/Demos/Mvc/api/DataGridWebApi';
+const form = e.form;
+const appointmentData = e.appointmentData;
+let reqid = appointmentData.id;
 
-  const ordersStore = new DevExpress.data.CustomStore({
-    key: 'OrderID',
-    load() {
-      return sendRequest(`${URL}/Orders`);
-    },
-    insert(values) {
-      return sendRequest(`${URL}/InsertOrder`, 'POST', {
-        values: JSON.stringify(values),
-      });
-    },
-    update(key, values) {
-      return sendRequest(`${URL}/UpdateOrder`, 'PUT', {
-        key,
-        values: JSON.stringify(values),
-      });
-    },
-    remove(key) {
-      return sendRequest(`${URL}/DeleteOrder`, 'DELETE', {
-        key,
-      });
-    },
-  });
+console.log("Appointment Data Before:", appointmentData);
 
-  const dataGrid = $('#grid').dxDataGrid({
-    dataSource: ordersStore,
-    repaintChangesOnly: true,
-    showBorders: true,
-    editing: {
-      refreshMode: 'reshape',
-      mode: 'cell',
-      allowAdding: true,
-      allowUpdating: true,
-      allowDeleting: true,
-    },
-    scrolling: {
-      mode: 'virtual',
-    },
-    columns: [{
-      dataField: 'CustomerID',
-      caption: 'Customer',
-      lookup: {
-        dataSource: {
-          paginate: true,
-          store: new DevExpress.data.CustomStore({
-            key: 'Value',
-            loadMode: 'raw',
-            load() {
-              return sendRequest(`${URL}/CustomersLookup`);
-            },
-          }),
-        },
-        valueExpr: 'Value',
-        displayExpr: 'Text',
-      },
-    }, {
-      dataField: 'OrderDate',
-      dataType: 'date',
-    }, {
-      dataField: 'Freight',
-    }, {
-      dataField: 'ShipCountry',
-    }, {
-      dataField: 'ShipVia',
-      caption: 'Shipping Company',
-      dataType: 'number',
-      lookup: {
-        dataSource: new DevExpress.data.CustomStore({
-          key: 'Value',
-          loadMode: 'raw',
-          load() {
-            return sendRequest(`${URL}/ShippersLookup`);
-          },
-        }),
-        valueExpr: 'Value',
-        displayExpr: 'Text',
-      },
-    },
-    ],
-    summary: {
-      totalItems: [{
-        column: 'CustomerID',
-        summaryType: 'count',
-      }, {
-        column: 'Freight',
-        valueFormat: '#0.00',
-        summaryType: 'sum',
-      }],
-    },
-  }).dxDataGrid('instance');
+if (!reqid) { // Jika tidak ada reqid, lakukan POST untuk membuat data baru
+    let cellData = e.cellData || {};
+    let ghm_room_id = cellData.ghm_room_id || appointmentData.ghm_room_id;
+    let roomData = roomsWithLocations.find(room => room.id === ghm_room_id);
+    let sector = roomData ? roomData.sector : null;
+    let startDate = cellData.startDate || appointmentData.startDate;
+    let endDate = cellData.endDate || appointmentData.endDate;
 
-  $('#refresh-mode').dxSelectBox({
-    items: ['full', 'reshape', 'repaint'],
-    value: 'reshape',
-    inputAttr: { 'aria-label': 'Refresh Mode' },
-    onValueChanged(e) {
-      dataGrid.option('editing.refreshMode', e.value);
-    },
-  });
+    if (ghm_room_id && startDate && endDate) { 
+        sendRequest(apiurl + "/" + modname, "POST", {
+            requestStatus: 0,
+            ghm_room_id: ghm_room_id,
+            startDate: startDate,
+            endDate: endDate,
+            sector: sector,
+            employee: cellData.employee || appointmentData.employee || [],
+            guest: cellData.guest || appointmentData.guest || [],
+            family: cellData.family || appointmentData.family || []
+        }).then(function(response) {
+            console.log("Response from POST request:", response);
+            
+            if (response.status === 'success') {
+                reqid = response.data.id;
+                appointmentData.id = reqid; // Update ID baru ke appointmentData
 
-  $('#clear').dxButton({
-    text: 'Clear',
-    onClick() {
-      $('#requests ul').empty();
-    },
-  });
+                // **PERUBAHAN PENTING**: Paksa Scheduler untuk menyimpan ID baru
+                e.component.updateAppointment(appointmentData, { id: reqid });
 
-  function sendRequest(url, method = 'GET', data) {
-    const d = $.Deferred();
+                // **PERUBAHAN PENTING**: Paksa form untuk menampilkan data baru
+                form.option("formData", appointmentData);
+                form.repaint();
+            } else {
+                DevExpress.ui.notify("Gagal mendapatkan ID!", "error", 3000);
+            }
+        }).catch(function(error) {
+            console.error("Error during POST request:", error);
+        });
+    } else {
+        console.error("Required data is missing");
+    }
 
-    logRequest(method, url, data);
+    dataSubmitted = false;
+    if (e.event) { 
+        e.event.preventDefault();
+    } else {
+        console.error("event is undefined");
+    }
+}
 
-    $.ajax(url, {
-      method,
-      data,
-      cache: false,
-      xhrFields: { withCredentials: true },
-    }).done((result) => {
-      d.resolve(method === 'GET' ? result.data : result);
-    }).fail((xhr) => {
-      d.reject(xhr.responseJSON ? xhr.responseJSON.Message : xhr.statusText);
-    });
-
-    return d.promise();
-  }
-
-  function logRequest(method, url, data) {
-    const args = Object.keys(data || {}).map((key) => `${key}=${data[key]}`).join(' ');
-
-    const logList = $('#requests ul');
-    const time = DevExpress.localization.formatDate(new Date(), 'HH:mm:ss');
-    const newItem = $('<li>').text([time, method, url.slice(URL.length), args].join(' '));
-
-    logList.prepend(newItem);
-  }
-});
+// **DEBUGGING: Cek apakah ID benar-benar diperbarui**
+console.log("Updated Appointment Data:", appointmentData);
+console.log("Final Req ID:", appointmentData.id);
