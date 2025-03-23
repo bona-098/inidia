@@ -492,6 +492,7 @@ $(function () {
                     const form = e.form;
                     const appointmentData = e.appointmentData;                    
                     let reqid = appointmentData.id;
+                    console.log("req1", reqid);
                     console.log("Appointment Data:", appointmentData); 
                     if (reqid == null) {
                         let cellData = e.cellData || {}; 
@@ -513,6 +514,8 @@ $(function () {
                                 family: cellData.family || appointmentData.family || []
                             }).then(function(response) {
                                 console.log("Response from POST request:", response); // Tambahkan log ini
+                                reqid = response.data.id; // Set reqid with the new ID
+                                console.log("rek2", reqid);
                             }).catch(function(error) {
                                 console.error("Error during POST request:", error); // Tambahkan log ini
                             });
@@ -526,8 +529,9 @@ $(function () {
                         } else {
                             console.error("event is undefined");
                         }
-                    }                    
-                    console.log("req", reqid);
+                    }          
+                    let reqis = appointmentData.id;
+                    console.log("req3", reqis);
                     let selectedRoom = appointmentData.ghm_room_id || null;
                     let newStartDate = new Date(appointmentData.startDate);
                     let newEndDate = new Date(appointmentData.endDate);
@@ -863,6 +867,16 @@ $(function () {
                     });
                 },
                 onAppointmentAdding: async function (e) {
+                    $('#btnadd').on('click',function(){
+                        sendRequest(apiurl + "/"+modname, "POST", {requestStatus:0}).then(function(response){
+                            const reqid = response.data.id;
+                            const mode = 'add';
+                            popup.option({
+                                contentTemplate: () => popupContentTemplate(reqid),
+                            });
+                            popup.show();
+                        });
+                    })
                     const appointmentData = e.appointmentData;
                     let scheduler = e.component;
                     let guestCount = safeArray(appointmentData.guest).length;
@@ -966,7 +980,7 @@ $(function () {
                                 let valremarks = '';
                                 if (response.status == 'success') {
                                     const reqid = response.data.id;
-                                    // console.log("reqid", reqid);
+                                    console.log("reqid", reqid);
                                     sendRequest(apiurl + "/submissionrequest/" + reqid + "/" + modelclass, "POST", {
                                         requestStatus: 1,
                                         action: actionForm,
