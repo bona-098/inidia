@@ -280,7 +280,9 @@ $(function () {
                         startDate: e.cellData.startDate,
                         endDate: e.cellData.endDate,
                         sector: sector,
-                        employee: e.cellData.employee
+                        employee: e.cellData.employee || [],
+                        guest: e.cellData.guest || [],
+                        family: e.cellData.family || []
                     });
                     if(response.status === 'success') {
                         const reqid = response.data.id;
