@@ -245,81 +245,82 @@ $(function () {
                 colorExpr: "color",
                 showAllDayPanel: false,
                 height: 710,          
-                onCellClick: async function(e) {
-                    if (dataSubmitted) return;
-                    dataSubmitted = true;
+                // onCellClick: async function(e) {
+                //     if (dataSubmitted) return;
+                //     dataSubmitted = true;
                     
-                    let today = new Date();
-                    today.setHours(0, 0, 0, 0); // Hanya ambil tanggal tanpa waktu
-                    let cellDate = new Date(e.cellData.startDate);
+                //     let today = new Date();
+                //     today.setHours(0, 0, 0, 0); // Hanya ambil tanggal tanpa waktu
+                //     // let cellDate = new Date(e.cellData.startDate);
                     
-                    if (cellDate < today) {
-                        e.cancel = true;
-                        DevExpress.ui.notify({
-                            type: "warning",
-                            displayTime: 3000,
-                            contentTemplate: (e) => {
-                                e.append(`
-                                    <div style="white-space: pre-line;">
-                                    Tidak bisa memilih tanggal yang sudah lewat!\n
-                                    You cannot select a past date!!\n
-                                    </div>
-                                `);
-                            }
-                        });
-                        dataSubmitted = false;
-                        return;
-                    }
-                    let roomData = roomsWithLocations.find(room => room.id === e.cellData.groups.ghm_room_id);
-                    if (!roomData) {
-                        DevExpress.ui.notify("Room not Found", "error", 3000);
-                        dataSubmitted = false;
-                        return;
-                    }
+                //     if (cellDate < today) {
+                //         e.cancel = true;
+                //         DevExpress.ui.notify({
+                //             type: "warning",
+                //             displayTime: 3000,
+                //             contentTemplate: (e) => {
+                //                 e.append(`
+                //                     <div style="white-space: pre-line;">
+                //                     Tidak bisa memilih tanggal yang sudah lewat!\n
+                //                     You cannot select a past date!!\n
+                //                     </div>
+                //                 `);
+                //             }
+                //         });
+                //         dataSubmitted = false;
+                //         return;
+                //     }
+                //     let cellDate = new Date(e.cellData.startDate);
+                //     let roomData = roomsWithLocations.find(room => room.id === e.cellData.groups.ghm_room_id);
+                //     if (!roomData) {
+                //         DevExpress.ui.notify("Room not Found", "error", 3000);
+                //         dataSubmitted = false;
+                //         return;
+                //     }
         
-                    let sector = roomData.sector;
-                    let response = await sendRequest(apiurl + "/"+modname, "POST", {
-                        requestStatus: 0,
-                        ghm_room_id: e.cellData.groups.ghm_room_id,
-                        startDate: e.cellData.startDate,
-                        endDate: e.cellData.endDate,
-                        sector: sector,
-                        employee: e.cellData.employee || [],
-                        guest: e.cellData.guest || [],
-                        family: e.cellData.family || []
-                    });
-                    if(response.status === 'success') {
-                        const reqid = response.data.id;
-                        popup.option({
-                            contentTemplate: () => popupContentTemplate(reqid),
-                        });
-                        popup.show();
-                    } else {
-                        DevExpress.ui.notify({
-                            type: "error",
-                            displayTime: 3000,
-                            contentTemplate: (e) => {
-                                e.append(`
-                                    <div style="white-space: pre-line;">
-                                    Gagal mendapatkan ID!\n
-                                    Failed to get ID!!\n
-                                    </div>
-                                `);
-                            }
-                        });
-                    }
-                    dataSubmitted = false;
-                    e.event.preventDefault();
-                },
-                onContentReady: function(e) {
-                    // Tambahkan event listener untuk double click pada cell
-                    $(e.element).find('.dx-scheduler-date-table-cell').on('dblclick', function(event) {
-                        var cellData = e.component.getCellData(event.target);
+                //     let sector = roomData.sector;
+                //     let response = await sendRequest(apiurl + "/"+modname, "POST", {
+                //         requestStatus: 0,
+                //         ghm_room_id: e.cellData.groups.ghm_room_id,
+                //         startDate: e.cellData.startDate,
+                //         endDate: e.cellData.endDate,
+                //         sector: sector,
+                //         employee: e.cellData.employee || [],
+                //         guest: e.cellData.guest || [],
+                //         family: e.cellData.family || []
+                //     });
+                //     if(response.status === 'success') {
+                //         const reqid = response.data.id;
+                //         popup.option({
+                //             contentTemplate: () => popupContentTemplate(reqid),
+                //         });
+                //         popup.show();
+                //     } else {
+                //         DevExpress.ui.notify({
+                //             type: "error",
+                //             displayTime: 3000,
+                //             contentTemplate: (e) => {
+                //                 e.append(`
+                //                     <div style="white-space: pre-line;">
+                //                     Gagal mendapatkan ID!\n
+                //                     Failed to get ID!!\n
+                //                     </div>
+                //                 `);
+                //             }
+                //         });
+                //     }
+                //     dataSubmitted = false;
+                //     e.event.preventDefault();
+                // },
+                // onContentReady: function(e) {
+                //     // Tambahkan event listener untuk double click pada cell
+                //     $(e.element).find('.dx-scheduler-date-table-cell').on('dblclick', function(event) {
+                //         var cellData = e.component.getCellData(event.target);
         
-                        // Panggil fungsi onCellDblClick dengan data cell
-                        onCellDblClick(e.component, cellData);
-                    });
-                },
+                //         // Panggil fungsi onCellDblClick dengan data cell
+                //         onCellDblClick(e.component, cellData);
+                //     });
+                // },
                 groups: ['ghm_room_id'],
                 resources: [
                     {
@@ -492,7 +493,48 @@ $(function () {
                 
                     const form = e.form;
                     const appointmentData = e.appointmentData;
+                    let roomData = roomsWithLocations.find(room => room.id === e.cellData.ghm_room_id);
+                    if (!roomData) {
+                        DevExpress.ui.notify("Room not Found", "error", 3000);
+                        dataSubmitted = false;
+                        return;
+                    }
+                    let cellDate = new Date(e.cellData.startDate);
                     let reqid = appointmentData.id;
+                    if (reqid == null) {
+                        let response = sendRequest(apiurl + "/"+modname, "POST", {
+                            requestStatus: 0,
+                            ghm_room_id: e.cellData.ghm_room_id,
+                            startDate: e.cellData.startDate,
+                            endDate: e.cellData.endDate,
+                            sector: sector,
+                            employee: e.cellData.employee || [],
+                            guest: e.cellData.guest || [],
+                            family: e.cellData.family || []
+                        });
+                        if(response.status === 'success') {
+                            const reqid = response.data.id;
+                            popup.option({
+                                contentTemplate: () => popupContentTemplate(reqid),
+                            });
+                            popup.show();
+                        } else {
+                            DevExpress.ui.notify({
+                                type: "error",
+                                displayTime: 3000,
+                                contentTemplate: (e) => {
+                                    e.append(`
+                                        <div style="white-space: pre-line;">
+                                        Gagal mendapatkan ID!\n
+                                        Failed to get ID!!\n
+                                        </div>
+                                    `);
+                                }
+                            });
+                        }
+                        dataSubmitted = false;
+                        e.event.preventDefault();
+                    }                    
                     console.log("req", reqid);
                     let selectedRoom = appointmentData.ghm_room_id || null;
                     let newStartDate = new Date(appointmentData.startDate);
