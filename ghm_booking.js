@@ -246,7 +246,6 @@ $(function () {
                 showAllDayPanel: false,
                 height: 710,          
                 onCellClick: async function(e) {
-                    // console.log("Double click event triggered", appointmentData);
                     let today = new Date();
                     today.setHours(0, 0, 0, 0); // Hanya ambil tanggal tanpa waktu
                     let cellDate = new Date(e.cellData.startDate);
@@ -267,16 +266,12 @@ $(function () {
                         });
                         return;
                     }
-            
-                    // Lakukan POST request untuk mendapatkan ID
-                    let appointmentData = booking;
-                    let selectedRoom = appointmentData.ghm_room_id || null;
-                    let roomData = roomsWithLocations.find(room => room.id === selectedRoom);
+                    let roomData = roomsWithLocations.find(room => room.id === e.cellData.groups.ghm_room_id);
                     if (!roomData) {
                         DevExpress.ui.notify("Room not Found", "error", 3000);
-                        e.cancel = true;
                         return;
                     }
+
                 
                     let sector = roomData.sector;
                     let response = await sendRequest(apiurl + "/"+modname, "POST", {
@@ -289,8 +284,6 @@ $(function () {
                     });
                     if(response.status === 'success') {
                         const reqid = response.data.id;
-                        
-                        // Panggil popup dengan ID yang baru didapatkan
                         popup.option({
                             contentTemplate: () => popupContentTemplate(reqid),
                         });
@@ -309,6 +302,16 @@ $(function () {
                             }
                         });
                     }
+                    e.event.preventDefault();
+                },
+                onContentReady: function(e) {
+                    // Tambahkan event listener untuk double click pada cell
+                    $(e.element).find('.dx-scheduler-date-table-cell').on('dblclick', function(event) {
+                        var cellData = e.component.getCellData(event.target);
+        
+                        // Panggil fungsi onCellDblClick dengan data cell
+                        onCellDblClick(e.component, cellData);
+                    });
                 },
                 groups: ['ghm_room_id'],
                 resources: [
