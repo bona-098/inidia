@@ -38,19 +38,6 @@ $(function () {
             dataSubmitted = false;
         });
     }
-    function submitIdToDatabase(id) {
-        return sendRequest(apiurl + "/submit-id", "POST", { id: id })
-            .then(function (response) {
-                if (response.status === 'success') {
-                    console.log('ID submitted successfully');
-                } else {
-                    console.log('Error submitting ID: ' + response.message);
-                }
-            })
-            .catch(function (error) {
-                console.log('Error submitting ID: ' + error.responseText);
-            });
-    }
     $('#booking-form').on('submit', function (event) {
         event.preventDefault();
         submitFormData();
@@ -245,82 +232,30 @@ $(function () {
                 colorExpr: "color",
                 showAllDayPanel: false,
                 height: 710,          
-                // onCellClick: async function(e) {
-                //     if (dataSubmitted) return;
-                //     dataSubmitted = true;
-                    
-                //     let today = new Date();
-                //     today.setHours(0, 0, 0, 0); // Hanya ambil tanggal tanpa waktu
-                //     // let cellDate = new Date(e.cellData.startDate);
-                    
-                //     if (cellDate < today) {
-                //         e.cancel = true;
-                //         DevExpress.ui.notify({
-                //             type: "warning",
-                //             displayTime: 3000,
-                //             contentTemplate: (e) => {
-                //                 e.append(`
-                //                     <div style="white-space: pre-line;">
-                //                     Tidak bisa memilih tanggal yang sudah lewat!\n
-                //                     You cannot select a past date!!\n
-                //                     </div>
-                //                 `);
-                //             }
-                //         });
-                //         dataSubmitted = false;
-                //         return;
-                //     }
-                //     let cellDate = new Date(e.cellData.startDate);
-                //     let roomData = roomsWithLocations.find(room => room.id === e.cellData.groups.ghm_room_id);
-                //     if (!roomData) {
-                //         DevExpress.ui.notify("Room not Found", "error", 3000);
-                //         dataSubmitted = false;
-                //         return;
-                //     }
-        
-                //     let sector = roomData.sector;
-                //     let response = await sendRequest(apiurl + "/"+modname, "POST", {
-                //         requestStatus: 0,
-                //         ghm_room_id: e.cellData.groups.ghm_room_id,
-                //         startDate: e.cellData.startDate,
-                //         endDate: e.cellData.endDate,
-                //         sector: sector,
-                //         employee: e.cellData.employee || [],
-                //         guest: e.cellData.guest || [],
-                //         family: e.cellData.family || []
-                //     });
-                //     if(response.status === 'success') {
-                //         const reqid = response.data.id;
-                //         popup.option({
-                //             contentTemplate: () => popupContentTemplate(reqid),
-                //         });
-                //         popup.show();
-                //     } else {
-                //         DevExpress.ui.notify({
-                //             type: "error",
-                //             displayTime: 3000,
-                //             contentTemplate: (e) => {
-                //                 e.append(`
-                //                     <div style="white-space: pre-line;">
-                //                     Gagal mendapatkan ID!\n
-                //                     Failed to get ID!!\n
-                //                     </div>
-                //                 `);
-                //             }
-                //         });
-                //     }
-                //     dataSubmitted = false;
-                //     e.event.preventDefault();
-                // },
-                // onContentReady: function(e) {
-                //     // Tambahkan event listener untuk double click pada cell
-                //     $(e.element).find('.dx-scheduler-date-table-cell').on('dblclick', function(event) {
-                //         var cellData = e.component.getCellData(event.target);
-        
-                //         // Panggil fungsi onCellDblClick dengan data cell
-                //         onCellDblClick(e.component, cellData);
-                //     });
-                // },
+                onCanceled : function (e) {
+                    console.log("loadData();");
+                },
+                onCellClick: async function(e) {
+                    const cellDate = new Date(e.cellData.startDate); // Retrieve the selected date and convert to Date object
+                    let today = new Date();
+                    today.setHours(0, 0, 0, 0); // Clear time for accurate date comparison
+                
+                    if (cellDate < today) { // Check if the selected date is earlier than today
+                        e.cancel = true; // Disable the interaction
+                        DevExpress.ui.notify({
+                            type: "warning",
+                            displayTime: 3000,
+                            contentTemplate: (element) => {
+                                element.append(`
+                                    <div style="white-space: pre-line;">
+                                    Tidak bisa memilih tanggal yang sudah lewat!\n
+                                    You cannot select a past date!!\n
+                                    </div>
+                                `);
+                            }
+                        });
+                    }
+                },                       
                 groups: ['ghm_room_id'],
                 resources: [
                     {
@@ -361,12 +296,19 @@ $(function () {
                         return isNaN(d.getTime()) ? "No Date" : d.toISOString().split("T")[0];
                     };
                     const actionButtonId = `action-btn-${booking.id}`;
-                    const isCancelable = Number(booking.requestStatus) === 1 || Number(booking.requestStatus) === 2 || Number(booking.requestStatus) === 3;
-                    const buttonLabel = isCancelable ? "Cancel" : "Delete";
-                    const buttonClass = isCancelable ? "btn-warning" : "btn-danger";
+                    const requestStatus = Number(booking.requestStatus);
+                    let buttonLabel = "";
+                    let buttonClass = "";
+                    if (requestStatus === 0) {
+                        buttonLabel = "Delete";
+                        buttonClass = "btn-danger";
+                    } else if (requestStatus === 1 || requestStatus === 2 || requestStatus === 3) {
+                        buttonLabel = "Cancel";
+                        buttonClass = "btn-warning";
+                    }
                     const tooltipHtml = `
                         <div>
-                            <b>Purpose (Text): ${booking.text || "No Title"}</b><br>
+                            <b>Purpose: ${booking.text || "No Title"}</b><br>
                             ${formatDate(booking.startDate)} - ${formatDate(booking.endDate)}<br>
                             <b>Occupancy:</b> ${roomOccupancy} Person<br>
                             <b>Booked:</b> ${totalGuests} Person<br>
@@ -383,27 +325,27 @@ $(function () {
                                 event.stopPropagation();
                                 event.preventDefault();
                                 Swal.fire({
-                                    title: isCancelable ? 'Cancel Booking?' : 'Are you sure?',
-                                    text: isCancelable
+                                    title: buttonLabel === "Cancel" ? 'Cancel Booking?' : 'Are you sure?',
+                                    text: buttonLabel === "Cancel"
                                         ? "Do you really want to cancel this booking?"
                                         : "Do you really want to delete this booking?",
-                                    icon: isCancelable ? 'warning' : 'error',
+                                    icon: buttonLabel === "Cancel" ? 'warning' : 'error',
                                     showCancelButton: true,
-                                    confirmButtonText: isCancelable ? 'Yes, cancel it!' : 'Yes, delete it!',
+                                    confirmButtonText: buttonLabel === "Cancel" ? 'Yes, cancel it!' : 'Yes, delete it!',
                                     cancelButtonText: 'No, keep it'
                                 }).then((result) => {
                                     if (!result.isConfirmed) return;
-                                    let requestType = isCancelable ? "PATCH" : "DELETE";
-                                    let requestData = isCancelable ? { requestStatus: 0 } : {};
+                                    let requestType = buttonLabel === "Cancel" ? "PATCH" : "DELETE";
+                                    let requestData = buttonLabel === "Cancel" ? { requestStatus: 0 } : {};
                                     sendRequest(apiurl + "/" + modname + "/" + booking.id, requestType, requestData)
                                         .then(response => {
                                             if (response.status === "success") {
                                                 Swal.fire({
                                                     icon: 'success',
-                                                    title: isCancelable ? 'Booking Canceled!' : 'Deleted!',
-                                                    text: isCancelable ?
-                                                        'Booking has been successfully set to Canceled.' :
-                                                        'Booking deleted successfully!',
+                                                    title: buttonLabel === "Cancel" ? 'Booking Canceled!' : 'Deleted!',
+                                                    text: buttonLabel === "Cancel"
+                                                        ? 'Booking has been successfully set to Canceled.'
+                                                        : 'Booking deleted successfully!',
                                                     timer: 2000,
                                                     showConfirmButton: false
                                                 });
@@ -443,7 +385,7 @@ $(function () {
                         .append($('<h2>').text(cellData.text));
                     const roomOccupancy = $('<div>')
                         .addClass('roomOccupancy')
-                        .html(`Bed: ${cellData.data.roomOccupancy}`);
+                        .html(`Occupancy: ${cellData.data.roomOccupancy}`);
                     let bgColor;
                     if (cellData.data.roomOccupancy == 4) {
                         bgColor = "#B0BEC5"; // Hijau untuk kamar dengan banyak bed
@@ -482,29 +424,25 @@ $(function () {
                     if (e.rowType == "data" && e.data.isParent === 1) {
                         e.cellElement.css('background', 'rgba(128, 128, 0, 0.1)');
                     }
-                },  
-                onAppointmentFormOpening: function (e) {
+                }, 
+                onAppointmentFormOpening: async function (e) {                    
                     e.popup.option({
-                        width: 700,
+                        width: 500,
                         height: 800,
-                    });
-                
+                    });                
                     const form = e.form;
                     const appointmentData = e.appointmentData;
                     let reqid = appointmentData.id;
-
                     console.log("Appointment Data Before:", appointmentData);
-
-                    if (!reqid) { // Jika tidak ada reqid, lakukan POST untuk membuat data baru
+                    if (!reqid) { 
                         let cellData = e.cellData || {};
                         let ghm_room_id = cellData.ghm_room_id || appointmentData.ghm_room_id;
                         let roomData = roomsWithLocations.find(room => room.id === ghm_room_id);
                         let sector = roomData ? roomData.sector : null;
                         let startDate = cellData.startDate || appointmentData.startDate;
                         let endDate = cellData.endDate || appointmentData.endDate;
-
                         if (ghm_room_id && startDate && endDate) {
-                            sendRequest(apiurl + "/" + modname, "POST", {
+                            const response = await sendRequest(apiurl + "/" + modname, "POST", {
                                 requestStatus: 0,
                                 ghm_room_id: ghm_room_id,
                                 startDate: startDate,
@@ -514,16 +452,11 @@ $(function () {
                                 guest: cellData.guest || appointmentData.guest || [],
                                 family: cellData.family || appointmentData.family || []
                             }).then(function(response) {
-                                console.log("Response from POST request:", response);
-                                
+                                console.log("Response from POST request:", response);                                
                                 if (response.status === 'success') {
                                     reqid = response.data.id;
-                                    appointmentData.id = reqid; // Update ID baru ke appointmentData
-
-                                    // **PERUBAHAN PENTING**: Paksa Scheduler untuk menyimpan ID baru
+                                    appointmentData.id = reqid; 
                                     e.component.updateAppointment(appointmentData, { id: reqid });
-
-                                    // **PERUBAHAN PENTING**: Paksa form untuk menampilkan data baru
                                     form.option("formData", appointmentData);
                                     form.repaint();
                                 } else {
@@ -543,12 +476,8 @@ $(function () {
                             console.error("event is undefined");
                         }
                     }
-
-                    // **DEBUGGING: Cek apakah ID benar-benar diperbarui**
                     console.log("Updated Appointment Data:", appointmentData);
                     console.log("Final Req ID:", appointmentData.id);
-
-
                     let selectedRoom = appointmentData.ghm_room_id || null;
                     let newStartDate = new Date(appointmentData.startDate);
                     let newEndDate = new Date(appointmentData.endDate);
@@ -794,9 +723,13 @@ $(function () {
                                                 width: 240,
                                                 placeholder: 'Search...',
                                             },
+                                            //tambahkan allow adding - admin bisa menambah dokument
                                             editing: {
                                                 useIcons: true,
                                                 mode: "popup",
+                                                // allowAdding: (((appointmentData.requestStatus == 0 || appointmentData.requestStatus == 1) && mode == 'view') ? true : (isMine == 1) && mode == 'edit' || mode == 'add' ) ? true : (admin == 1 ? true : false),
+                                                // allowUpdating: (((isMine == 1 || isPIC == 1) && mode == 'view') ? true : (isMine == 1) && mode == 'edit' || mode == 'add' ) ? true : (admin == 1 ? true : false),
+                                                // allowDeleting: (((isMine == 1 || isPIC == 1) && mode == 'view') ? true : (isMine == 1) && mode == 'edit' || mode == 'add' ) ? true : (admin == 1 ? true : false),
                                                 allowAdding: true,
                                                 allowUpdating: true,
                                                 allowDeleting: true,
@@ -1015,19 +948,7 @@ $(function () {
                     const appointmentData = e.newData;
                     const oldAppointmentData = e.oldData;
                     const currentStatus = oldAppointmentData.requestStatus;
-                    if (!["0", "1", "2"].includes(currentStatus)) {
-                        DevExpress.ui.notify({
-                            type: "error",
-                            displayTime: 3000,
-                            contentTemplate: (e) => {
-                                e.append(`
-                                    <div style="white-space: pre-line;">
-                                    THis booking status cannot be updated!\n
-                                    Booking dengan status ini tidak dapat diperbarui!\n
-                                    </div>
-                                `);
-                            }
-                        });
+                    if (!["0", "1", "2"].includes(currentStatus)) {                        
                         e.cancel = true;
                         return;
                     }
