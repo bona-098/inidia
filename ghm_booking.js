@@ -159,7 +159,7 @@ $(function () {
         showTitle: true,
         title: "Help",
         visible: false,
-        dragEnabled: true,
+        dragEnabled: false,
         hideOnOutsideClick: true
     });
     function updateRoomSelector(location) {
@@ -271,6 +271,8 @@ $(function () {
                     allowAdding: true,
                     allowUpdating: true,
                     allowDeleting: true,
+                    allowDragging: false,
+                    allowResizing: false,
                 },
                 onAppointmentRendered: function (e) {
                     if (e.appointmentData.requestColor) {
@@ -436,7 +438,6 @@ $(function () {
                     const form = e.form;
                     const appointmentData = e.appointmentData;
                     let reqid = appointmentData.id;
-                    var isMine = options.data.isMine;
                     console.log("Appointment Data Before:", appointmentData);
                     if (!reqid) { 
                         let cellData = e.cellData || {};
@@ -586,6 +587,7 @@ $(function () {
                                     editorType: 'dxDateBox',
                                     dataField: 'startDate',
                                     editorOptions: {
+                                        min: new Date(),
                                         type: 'datetime',
                                         value: appointmentData.startDate,
                                         displayFormat: 'dd-MM-yyyy HH:mm:ss',
@@ -731,9 +733,9 @@ $(function () {
                                             editing: {
                                                 useIcons: true,
                                                 mode: "popup",
-                                                allowAdding: ((appointmentData.requestStatus == 0 || appointmentData.requestStatus == 1)) ? true : (isMine == 1) ? true : (admin == 1),
-                                                allowUpdating: ((isMine == 1 || isAdmin == 1)) ? true : false,
-                                                allowDeleting: ((isMine == 1 || isAdmin == 1)) ? true : false,
+                                                allowAdding: true,
+                                                allowUpdating: true,
+                                                allowDeleting: true,
                                             },
                                             paging: { enabled: true, pageSize: 10 },
                                             columns: [
@@ -760,7 +762,12 @@ $(function () {
                                                     ]
                                                 },
                                                 {
-                                                    dataField: "remarks"
+                                                    dataField: "remarks",
+                                                    lookup: {
+                                                        dataSource: ['KTP','KK','Supporting Document'],
+                                                        searchEnabled: false
+                                                    },
+                                                    validationRules: [{ type: "required" }]
                                                 },
                                             ],
                                             export: {
@@ -912,24 +919,44 @@ $(function () {
                                 let actionForm = 'submission';
                                 let valApprovalType = '';
                                 let valremarks = '';
+                                let guestCount = safeArray(appointmentData.guest).length;
+                                let familyCount = safeArray(appointmentData.family).length;
+                                
                                 if (response.status == 'success') {
                                     console.log("reqid", reqid);
-                                    sendRequest(apiurl + "/submissionrequest/" + reqid + "/" + modelclass, "POST", {
-                                        requestStatus: 1,
-                                        action: actionForm,
-                                        approvalAction: (valapprovalAction == null) ? 1 : parseInt(valapprovalAction),
-                                        approvalType: valApprovalType,
-                                        remarks: valremarks
-                                    }).then(function (response) {
-                                        if (response.status == 'success') {
-                                            loadData();
-                                            Swal.fire({
-                                                icon: 'success',
-                                                title: 'Saved',
-                                                text: 'The submission has been submitted.',
-                                            });
-                                        }
-                                    });
+                                    console.log("family", familyCount);
+                                    console.log("guestCount", guestCount);
+                                    if (familyCount > 0 || guestCount > 0) {
+                                        
+                                        sendRequest(apiurl + "/checkattachmentghm", "POST",{
+                                            req_id: reqid,
+                                            modelname: modelclass,
+                                            countfamily: familyCount,
+                                            countguest: guestCount
+                                        }).then(function (response) {
+                                            console.log("respon", response);
+                                            if (response.status == 'success') {
+                                                sendRequest(apiurl + "/submissionrequest/" + reqid + "/" + modelclass, "POST", {
+                                                    requestStatus: 1,
+                                                    action: actionForm,
+                                                    approvalAction: (valapprovalAction == null) ? 1 : parseInt(valapprovalAction),
+                                                    approvalType: valApprovalType,
+                                                    remarks: valremarks
+                                                }).then(function (response) {
+                                                    if (response.status == 'success') {
+                                                        loadData();
+                                                        Swal.fire({
+                                                            icon: 'success',
+                                                            title: 'Saved',
+                                                            text: 'The submission has been submitted.',
+                                                        });
+                                                    }
+                                                });
+                                            } 
+                                        })
+                                    }                                    
+                                    
+                                    
                                 }
                             });
                         }
