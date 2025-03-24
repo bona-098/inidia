@@ -1,14 +1,11 @@
-Apa itu Guest House & Mess Booking System?
+1. Apa itu Guesthouse & Mess Booking System?
+Guesthouse & Mess Booking System adalah sistem digital yang digunakan perusahaan untuk mengelola pemesanan dan administrasi akomodasi bagi karyawan dan tamu bisnis. Sistem ini memungkinkan reservasi yang lebih efisien dengan pencatatan real-time, mengurangi kesalahan dalam alokasi kamar, serta meningkatkan transparansi dan efisiensi operasional melalui integrasi dengan HR dan keuangan.
 
-**Masalah Awal:**
-Pemesanan guest house atau mess melalui WhatsApp atau email sering menyebabkan tumpang tindih karena kamar yang sudah dipesan tidak terlihat. Sebelum menggunakan booking system, para calon penghuni kesulitan untuk melihat ketersediaan kamar. Ini memperlambat pekerjaan karena HR Service harus menginformasikan ketersediaan kamar secara manual.
+2. Masalah Awal
+Sebelum menggunakan booking system, pemesanan masih dilakukan melalui WhatsApp atau email, yang sering menyebabkan tumpang tindih karena ketersediaan kamar tidak terlihat secara langsung. Calon penghuni kesulitan mengetahui kamar yang tersedia, sehingga HR Service harus melakukan pengecekan dan konfirmasi secara manual, memperlambat proses dan meningkatkan risiko kesalahan.
 
-**Dampak:**
-1. HR Service harus melakukan pengecekan manual terkait penghuni guest house atau mess, menghabiskan waktu dan tenaga.
-2. End User sering mengalami pemesanan yang tumpang tindih dan mendapatkan informasi yang kurang lengkap, menyebabkan ketidaknyamanan dan ketidakefisienan dalam proses pemesanan.
+2.1 Dampak
+HR Service harus melakukan pengecekan manual, menghabiskan waktu dan tenaga. End user sering mengalami pemesanan tumpang tindih akibat informasi yang kurang jelas, menyebabkan ketidaknyamanan serta ketidakefisienan dalam proses pemesanan. Akibatnya, operasional menjadi lambat, dan pengalaman pengguna terhadap fasilitas perusahaan kurang optimal.
 
-**Solusi:**
-1. Membuat sistem booking terintegrasi dengan fasilitas guest house dan mess.
-2. Permintaan End User langsung diproses secara otomatis oleh HR Service Leader, memastikan penanganan cepat dan efisien.
-3. Semua booking yang telah disetujui dapat dilihat pengguna lain secara real-time, meningkatkan efisiensi dan transparansi.
-4. Mengurangi risiko tumpang tindih pemesanan serta memberikan pengalaman yang lebih baik bagi pengguna.
+2.2 Solusi
+Perusahaan perlu mengimplementasikan Guesthouse & Mess Booking System untuk mengotomatiskan pemesanan. Sistem ini memungkinkan HR Service Leader memproses permintaan lebih cepat dan menampilkan booking yang telah disetujui secara real-time, sehingga pengguna lain dapat melihat ketersediaan kamar tanpa perlu konfirmasi manual. Dengan sistem ini, risiko tumpang tindih berkurang, transparansi meningkat, dan pengalaman pengguna menjadi lebih baik.
