@@ -429,10 +429,14 @@ $(function () {
                     e.popup.option({
                         width: 500,
                         height: 800,
-                    });                
+                        onHiding: function () {
+                            loadData(); // Memanggil loadData() ketika form dibatalkan
+                        }
+                    });               
                     const form = e.form;
                     const appointmentData = e.appointmentData;
                     let reqid = appointmentData.id;
+                    var isMine = options.data.isMine;
                     console.log("Appointment Data Before:", appointmentData);
                     if (!reqid) { 
                         let cellData = e.cellData || {};
@@ -727,12 +731,9 @@ $(function () {
                                             editing: {
                                                 useIcons: true,
                                                 mode: "popup",
-                                                // allowAdding: (((appointmentData.requestStatus == 0 || appointmentData.requestStatus == 1) && mode == 'view') ? true : (isMine == 1) && mode == 'edit' || mode == 'add' ) ? true : (admin == 1 ? true : false),
-                                                // allowUpdating: (((isMine == 1 || isPIC == 1) && mode == 'view') ? true : (isMine == 1) && mode == 'edit' || mode == 'add' ) ? true : (admin == 1 ? true : false),
-                                                // allowDeleting: (((isMine == 1 || isPIC == 1) && mode == 'view') ? true : (isMine == 1) && mode == 'edit' || mode == 'add' ) ? true : (admin == 1 ? true : false),
-                                                allowAdding: true,
-                                                allowUpdating: true,
-                                                allowDeleting: true,
+                                                allowAdding: ((appointmentData.requestStatus == 0 || appointmentData.requestStatus == 1)) ? true : (isMine == 1) ? true : (admin == 1),
+                                                allowUpdating: ((isMine == 1 || isAdmin == 1)) ? true : false,
+                                                allowDeleting: ((isMine == 1 || isAdmin == 1)) ? true : false,
                                             },
                                             paging: { enabled: true, pageSize: 10 },
                                             columns: [
