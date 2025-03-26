@@ -60,3 +60,152 @@ public function checkattachmentghm(Request $request)
     }
 
 ghm_booking.js
+onAppointmentAdding: async function (e) {
+                    const appointmentData = e.appointmentData;
+                    let scheduler = e.component;
+                    let guestCount = safeArray(appointmentData.guest).length;
+                    let familyCount = safeArray(appointmentData.family).length;
+                    let employeeCount = safeArray(appointmentData.employee).length;
+                    let totalNewGuests = guestCount + familyCount + employeeCount;
+                
+                    if (totalNewGuests < 1) {
+                        DevExpress.ui.notify({
+                            type: "error",
+                            displayTime: 3000,
+                            contentTemplate: (e) => {
+                                e.append(`
+                                    <div style="white-space: pre-line;">
+                                    List guest is required!\n
+                                    Daftar tamu harus di isi!\n
+                                    </div>
+                                `);
+                            }
+                        });
+                        e.cancel = true;
+                        return;
+                    }
+                
+                    let selectedRoom = appointmentData.ghm_room_id;
+                    let roomData = roomsWithLocations.find(room => room.id === selectedRoom);
+                    if (!roomData) {
+                        DevExpress.ui.notify("Room not Found", "error", 3000);
+                        e.cancel = true;
+                        return;
+                    }
+                
+                    let sector = roomData.sector;
+                    let bookingData = await loadNewData();
+                    let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;
+                    let dailyGuestCount = await getTotalGuestsPerDay(
+                        bookingData.filter(b => b.requestStatus != 4 && b.requestStatus != 0 && b.requestStatus != 2 && b.requestStatus != 1),
+                        selectedRoom,
+                        appointmentData.startDate,
+                        appointmentData.endDate
+                    );
+                    let totalGuestsAfterAdding = (dailyGuestCount || 0) + totalNewGuests;
+                    if (totalGuestsAfterAdding > roomCapacity) {
+                        Swal.fire({
+                            title: '<strong>UPS...</strong>',
+                            html: `
+                                <div style="white-space: no wrap; overflow: hidden; text-overflow: ellipsis;">
+                                    The room is full, please select another room or another date!<br>
+                                    kamar sudah penuh, silahkan pilih kamar lain atau tanggal lain!
+                                </div>
+                            `,
+                            icon: 'error',
+                            confirmButtonText: 'OK',
+                        });
+                        e.cancel = true;
+                        loadData();
+                        return;
+                    }
+                
+                    let reqid = appointmentData.id;
+                
+                    Swal.fire({
+                        title: 'What do you want to do?',
+                        text: 'Choose an option for this booking',
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Submit Now',
+                        cancelButtonText: 'Save as Draft',
+                        reverseButtons: true
+                    }).then((result) => {
+                        let requestStatus = 0;
+                        if (!result.isConfirmed) {
+                            sendRequest(apiurl + "/"+modname+"/"+reqid, "PUT", {
+                                requestStatus: requestStatus,
+                                text: appointmentData.text,
+                                description: appointmentData.description,
+                                startDate: appointmentData.startDate,
+                                endDate: appointmentData.endDate,
+                                ghm_room_id: appointmentData.ghm_room_id,
+                                employee: appointmentData.employee,
+                                guest: appointmentData.guest,
+                                family: appointmentData.family,
+                                sector: sector,
+                                id:appointmentData.id
+                            }).then(function () {
+                                loadData();
+                            });
+                        } else {
+                            sendRequest(apiurl + "/"+modname+"/"+reqid, "PUT", {
+                                requestStatus: requestStatus,
+                                text: appointmentData.text,
+                                description: appointmentData.description,
+                                startDate: appointmentData.startDate,
+                                endDate: appointmentData.endDate,
+                                ghm_room_id: appointmentData.ghm_room_id,
+                                employee: appointmentData.employee,
+                                guest: appointmentData.guest,
+                                family: appointmentData.family,
+                                sector: sector,
+                                id:appointmentData.id
+                            }).then(function (response) {
+                                let valapprovalAction = null;
+                                let actionForm = 'submission';
+                                let valApprovalType = '';
+                                let valremarks = '';
+                                let guestCount = safeArray(appointmentData.guest).length;
+                                let familyCount = safeArray(appointmentData.family).length;
+                                
+                                if (response.status == 'success') {
+                                    console.log("reqid", reqid);
+                                    console.log("family", familyCount);
+                                    console.log("guestCount", guestCount);
+                                    if (familyCount > 0 || guestCount > 0) {
+                                        
+                                        sendRequest(apiurl + "/checkattachmentghm", "POST",{
+                                            req_id: reqid,
+                                            modelname: modelclass,
+                                            countfamily: familyCount,
+                                            countguest: guestCount
+                                        }).then(function (response) {
+                                            console.log("respon", response);
+                                            if (response.status == 'success') {
+                                                sendRequest(apiurl + "/submissionrequest/" + reqid + "/" + modelclass, "POST", {
+                                                    requestStatus: 1,
+                                                    action: actionForm,
+                                                    approvalAction: (valapprovalAction == null) ? 1 : parseInt(valapprovalAction),
+                                                    approvalType: valApprovalType,
+                                                    remarks: valremarks
+                                                }).then(function (response) {
+                                                    if (response.status == 'success') {
+                                                        loadData();
+                                                        Swal.fire({
+                                                            icon: 'success',
+                                                            title: 'Saved',
+                                                            text: 'The submission has been submitted.',
+                                                        });
+                                                    }
+                                                });
+                                            } 
+                                        })
+                                    }                                    
+                                    
+                                    
+                                }
+                            });
+                        }
+                    });
+                },
