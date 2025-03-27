@@ -432,9 +432,9 @@ $(function () {
                         width: 500,
                         height: 800,
                         onHiding: function () {
-                            loadData(); // Memanggil loadData() ketika form dibatalkan
+                            loadData();
                         }
-                    });               
+                    });
                     const form = e.form;
                     const appointmentData = e.appointmentData;
                     let reqid = appointmentData.id;
@@ -493,10 +493,21 @@ $(function () {
                             new Date(a.startDate) <= newEndDate &&
                             new Date(a.endDate) >= newStartDate
                         )
-                        .reduce((sum, a) => sum + (Number(a.totalPeople) || 0), 0);
-                
+                        .reduce((sum, a) => sum + (Number(a.totalPeople) || 0), 0);               
+                    
                     function validateBooking() {
+                        let guestCount = (form.getEditor("guest")?.option("value") || []).length;
+                        let familyCount = (form.getEditor("family")?.option("value") || []).length;
+                        let employeeCount = (form.getEditor("employee")?.option("value") || []).length;
+                        let totalGuests = guestCount + familyCount + employeeCount;
+                        console.log("total guest", totalGuests);
+                        let selectedRoom = form.getEditor("ghm_room_id")?.option("value");
                         let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;
+                        console.log("total Kaps", roomCapacity);
+                        let doneButton = $(".dx-popup-bottom .dx-button.dx-popup-done");
+                        if (totalGuests > roomCapacity) {
+                            DevExpress.ui.notify("Jumlah tamu melebihi kapasitas kamar!", "error", 2000);
+                        }
                         let remainingCapacity = roomCapacity - totalBooked;
                         if (totalBooked > roomCapacity) {
                             DevExpress.ui.notify({
