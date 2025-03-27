@@ -1,3 +1,53 @@
+min: new Date(),
+max: new Date(new Date().setDate(new Date().getDate() + 14)), // Maksimal 14 hari ke depan
+firstDayOfWeek: 1,
+startDayHour: 8,
+endDayHour: 23,
+colorExpr: "color",
+showAllDayPanel: false,
+height: 710,          
+onCanceled : function (e) {
+    console.log("loadData();");
+},
+onCellClick: async function(e) {
+    const cellDate = new Date(e.cellData.startDate); // Ambil tanggal yang dipilih
+    let today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset jam untuk perbandingan tanggal yang akurat
+
+    let maxDate = new Date();
+    maxDate.setDate(today.getDate() + 14); // Set batas maksimal 14 hari ke depan
+
+    if (cellDate < today) { // Jika memilih tanggal yang sudah lewat
+        e.cancel = true;
+        DevExpress.ui.notify({
+            type: "warning",
+            displayTime: 3000,
+            contentTemplate: (element) => {
+                element.append(`
+                    <div style="white-space: pre-line;">
+                    Tidak bisa memilih tanggal yang sudah lewat!\n
+                    You cannot select a past date!\n
+                    </div>
+                `);
+            }
+        });
+    } else if (cellDate > maxDate) { // Jika memilih tanggal lebih dari 14 hari ke depan
+        e.cancel = true;
+        DevExpress.ui.notify({
+            type: "error",
+            displayTime: 3000,
+            contentTemplate: (element) => {
+                element.append(`
+                    <div style="white-space: pre-line;">
+                    Tidak bisa memilih tanggal lebih dari 14 hari ke depan!\n
+                    You cannot select a date more than 14 days ahead!\n
+                    </div>
+                `);
+            }
+        });
+    }
+},
+====
 var modname = 'ghmrequest';
 var modelclass = 'Ghm';
 var popupmode;
