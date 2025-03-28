@@ -1,69 +1,3 @@
-min: new Date(),
-max: new Date(new Date().setDate(new Date().getDate() + 14)), // Maksimal 14 hari ke depan
-firstDayOfWeek: 1,
-startDayHour: 8,
-endDayHour: 23,
-colorExpr: "color",
-showAllDayPanel: false,
-height: 710,
-onCanceled: function (e) {
-    console.log("loadData();");
-},
-onCellClick: async function (e) {
-    const cellDate = new Date(e.cellData.startDate);
-    let today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    let maxDate = new Date();
-    maxDate.setDate(today.getDate() + 14);
-
-    if (cellDate < today) { // Tanggal yang sudah lewat
-        e.cancel = true;
-        DevExpress.ui.notify({
-            type: "warning",
-            displayTime: 3000,
-            contentTemplate: (element) => {
-                element.append(`
-                    <div style="white-space: pre-line;">
-                    Tidak bisa memilih tanggal yang sudah lewat!\n
-                    You cannot select a past date!\n
-                    </div>
-                `);
-            }
-        });
-    } else if (cellDate > maxDate) { // Tanggal lebih dari 14 hari ke depan
-        e.cancel = true;
-        DevExpress.ui.notify({
-            type: "error",
-            displayTime: 3000,
-            contentTemplate: (element) => {
-                element.append(`
-                    <div style="white-space: pre-line;">
-                    Tidak bisa memilih tanggal lebih dari 14 hari ke depan!\n
-                    You cannot select a date more than 14 days ahead!\n
-                    </div>
-                `);
-            }
-        });
-    }
-},
-// Tambahkan cellTemplate untuk memberi efek arsir pada hari yang tidak bisa dipilih
-cellTemplate: function (cellData, cellIndex, cellElement) {
-    const cellDate = new Date(cellData.startDate);
-    let today = new Date();
-    today.setHours(0, 0, 0, 0);
-    let maxDate = new Date();
-    maxDate.setDate(today.getDate() + 14);
-
-    if (cellDate < today || cellDate > maxDate) {
-        $(cellElement).css({
-            "background": "repeating-linear-gradient(45deg, #f8d7da, #f8d7da 10px, #ffffff 10px, #ffffff 20px)",
-            "pointer-events": "none", // Mencegah interaksi
-            "opacity": "0.5"
-        });
-    }
-}
-====
 var modname = 'ghmrequest';
 var modelclass = 'Ghm';
 var popupmode;
@@ -292,6 +226,7 @@ $(function () {
                 currentView: 'month',
                 currentDate: new Date(),
                 min: new Date(),
+                max: new Date(new Date().setDate(new Date().getDate() + 14)), // Maksimal 14 hari ke depan
                 firstDayOfWeek: 1,
                 startDayHour: 8,
                 endDayHour: 23,
@@ -302,26 +237,43 @@ $(function () {
                     console.log("loadData();");
                 },
                 onCellClick: async function(e) {
-                    const cellDate = new Date(e.cellData.startDate); // Retrieve the selected date and convert to Date object
+                    const cellDate = new Date(e.cellData.startDate); 
                     let today = new Date();
-                    today.setHours(0, 0, 0, 0); // Clear time for accurate date comparison
-                
-                    if (cellDate < today) { // Check if the selected date is earlier than today
-                        e.cancel = true; // Disable the interaction
+                    today.setHours(0, 0, 0, 0);
+
+                    let maxDate = new Date();
+                    maxDate.setDate(today.getDate() + 14);
+
+                    if (cellDate < today) { 
+                        e.cancel = true;
                         DevExpress.ui.notify({
                             type: "warning",
                             displayTime: 3000,
                             contentTemplate: (element) => {
                                 element.append(`
                                     <div style="white-space: pre-line;">
+                                    You cannot select a past date!\n
                                     Tidak bisa memilih tanggal yang sudah lewat!\n
-                                    You cannot select a past date!!\n
+                                    </div>
+                                `);
+                            }
+                        });
+                    } else if (cellDate > maxDate) {
+                        e.cancel = true;
+                        DevExpress.ui.notify({
+                            type: "error",
+                            displayTime: 3000,
+                            contentTemplate: (element) => {
+                                element.append(`
+                                    <div style="white-space: pre-line;">
+                                    You cannot select a date more than 14 days ahead!\n
+                                    Tidak bisa memilih tanggal lebih dari 14 hari ke depan!\n
                                     </div>
                                 `);
                             }
                         });
                     }
-                },                       
+                },
                 groups: ['ghm_room_id'],
                 resources: [
                     {
@@ -456,13 +408,26 @@ $(function () {
                         .html(`Occupancy: ${cellData.data.roomOccupancy}`);
                     let bgColor;
                     if (cellData.data.roomOccupancy == 4) {
-                        bgColor = "#B0BEC5"; // Hijau untuk kamar dengan banyak bed
+                        bgColor = "#B0BEC5"; 
                     } else if (cellData.data.roomOccupancy == 3) {
-                        bgColor = "#90A4AE"; // Oranye untuk kamar dengan kapasitas sedang            
+                        bgColor = "#90A4AE";           
                     } else if (cellData.data.roomOccupancy == 2) {
-                        bgColor = "#A5D6A7"; // Oranye untuk kamar dengan kapasitas sedang
+                        bgColor = "#A5D6A7"; 
                     } else {
-                        bgColor = "#FFCCBC"; // Merah untuk kamar dengan kapasitas sedikit
+                        bgColor = "#FFCCBC"; 
+                    }
+                    const cellDate = new Date(cellData.startDate);
+                    let today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    let maxDate = new Date();
+                    maxDate.setDate(today.getDate() + 14);
+
+                    if (cellDate < today || cellDate > maxDate) {
+                        $(cellElement).css({
+                            "background": "repeating-linear-gradient(45deg, #f8d7da, #f8d7da 10px, #ffffff 10px, #ffffff 20px)",
+                            "pointer-events": "none", // Mencegah interaksi
+                            "opacity": "0.5"
+                        });
                     }
                     const combinedColumn = $('<div>')
                         .addClass('combined-column')
@@ -477,22 +442,25 @@ $(function () {
                     return combinedColumn;
                 },
                 onCellPrepared: function (e) {
-                    if (e.rowType == "data" && e.column.dataField === "code") {
+                    if (e.rowType === "data" && e.dataField === "code") {
                         const isCodeVisible = e.data.code !== null;
                         $("#formdata").dxDataGrid('columnOption', 'code', 'visible', isCodeVisible);
                     }
-                    if (e.rowType == "data" && (e.column.index > 0 && e.column.index < 6)) {
+                    // Tambahkan logika untuk mengarsir cell yang disable
+                    if (e.rowType === "data" && e.column.index > 0 && e.column.index < 6) {
                         if (!e.value || /^\s*$/.test(e.value)) {
                             e.cellElement.css({
                                 "backgroundColor": "#ffe6e6",
-                                "border": "0.5px solid #f56e6e"
+                                "border": "0.5px solid #f56e6e",
+                                "backgroundImage": "repeating-linear-gradient(45deg, #f56e6e 0, #f56e6e 1px, #ffe6e6 1px, #ffe6e6 5px)",
+                                "backgroundSize": "7px 7px"
                             });
                         }
                     }
-                    if (e.rowType == "data" && e.data.isParent === 1) {
+                    if (e.rowType === "data" && e.data.isParent === 1) {
                         e.cellElement.css('background', 'rgba(128, 128, 0, 0.1)');
                     }
-                }, 
+                },
                 onAppointmentFormOpening: async function (e) {                    
                     e.popup.option({
                         width: 500,
@@ -552,7 +520,7 @@ $(function () {
                     let selectedRoom = appointmentData.ghm_room_id || null;
                     let newStartDate = new Date(appointmentData.startDate);
                     let newEndDate = new Date(appointmentData.endDate);
-                    let appointments = e.component.option("dataSource") || [];
+                    let appointments = e.component.option("dataSource") || [];                    
                     let totalBooked = appointments
                         .filter(a =>
                             a.ghm_room_id === selectedRoom &&
@@ -563,7 +531,19 @@ $(function () {
                 
                     
                     function validateBooking() {
+                        let guestCount = (form.getEditor("guest")?.option("value") || []).length;
+                        let familyCount = (form.getEditor("family")?.option("value") || []).length;
+                        let employeeCount = (form.getEditor("employee")?.option("value") || []).length;
+                        let totalGuests = guestCount + familyCount + employeeCount + totalBooked;
+                        console.log("total guest", totalGuests);
+                        console.log("total booked", totalBooked);
+                        let selectedRoom = form.getEditor("ghm_room_id")?.option("value");
+                        // let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;
+
+                        
                         let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;
+                        console.log("total Kaps", roomCapacity);
+
                         let remainingCapacity = roomCapacity - totalBooked;
                         if (totalBooked > roomCapacity) {
                             DevExpress.ui.notify({
@@ -578,6 +558,15 @@ $(function () {
                                     `);
                                 }
                             });
+                        }
+                        if (totalGuests === 0) {
+                            DevExpress.ui.notify("Setidaknya salah satu dari Employee, Guest, atau Family harus diisi!", "error", 2000);
+                            return false;
+                        }
+
+                        if (totalGuests > roomCapacity) {
+                            DevExpress.ui.notify("Jumlah tamu melebihi kapasitas kamar!", "error", 2000);
+                            return false;
                         }
                         let formData = form.option("formData");
                         let hasGuestOrFamily = (formData.guest && formData.guest.length > 0) || (formData.family && formData.family.length > 0);
@@ -655,6 +644,7 @@ $(function () {
                                     dataField: 'startDate',
                                     editorOptions: {
                                         min: new Date(),
+                                        max: new Date(new Date().setDate(new Date().getDate() + 14)),
                                         type: 'datetime',
                                         value: appointmentData.startDate,
                                         displayFormat: 'dd-MM-yyyy HH:mm:ss',
