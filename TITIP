@@ -1,72 +1,46 @@
-min: new Date(),
-max: new Date(new Date().setDate(new Date().getDate() + 14)), // Maksimal 14 hari ke depan
-firstDayOfWeek: 1,
-startDayHour: 8,
-endDayHour: 23,
-colorExpr: "color",
-showAllDayPanel: false,
-height: 710,
-onCanceled: function (e) {
-    console.log("loadData();");
-},
-onCellClick: async function (e) {
-    const cellDate = new Date(e.cellData.startDate);
-    let today = new Date();
-    today.setHours(0, 0, 0, 0);
+$("#scheduler").dxScheduler({
+    dataSource: [],
+    views: ["week", "month"],
+    currentView: "week",
+    currentDate: new Date(),
+    firstDayOfWeek: 1,
+    startDayHour: 8,
+    endDayHour: 23,
+    showAllDayPanel: false,
+    height: 710,
 
-    let maxDate = new Date();
-    maxDate.setDate(today.getDate() + 14);
+    // Mencegah memilih tanggal yang tidak valid
+    onCellClick: function (e) {
+        const cellDate = new Date(e.cellData.startDate);
+        let today = new Date();
+        today.setHours(0, 0, 0, 0);
 
-    if (cellDate < today) { // Tanggal yang sudah lewat
-        e.cancel = true;
-        DevExpress.ui.notify({
-            type: "warning",
-            displayTime: 3000,
-            contentTemplate: (element) => {
-                element.append(`
-                    <div style="white-space: pre-line;">
-                    Tidak bisa memilih tanggal yang sudah lewat!\n
-                    You cannot select a past date!\n
-                    </div>
-                `);
-            }
-        });
-    } else if (cellDate > maxDate) { // Tanggal lebih dari 14 hari ke depan
-        e.cancel = true;
-        DevExpress.ui.notify({
-            type: "error",
-            displayTime: 3000,
-            contentTemplate: (element) => {
-                element.append(`
-                    <div style="white-space: pre-line;">
-                    Tidak bisa memilih tanggal lebih dari 14 hari ke depan!\n
-                    You cannot select a date more than 14 days ahead!\n
-                    </div>
-                `);
-            }
-        });
+        let maxDate = new Date();
+        maxDate.setDate(today.getDate() + 14);
+
+        if (cellDate < today) {
+            e.cancel = true;
+            DevExpress.ui.notify("Tidak bisa memilih tanggal yang sudah lewat!", "warning", 3000);
+        } else if (cellDate > maxDate) {
+            e.cancel = true;
+            DevExpress.ui.notify("Tidak bisa memilih tanggal lebih dari 14 hari ke depan!", "error", 3000);
+        }
+    },
+
+    // Mengarsir cell yang tidak bisa dipilih (backdate & lebih dari H+14)
+    cellTemplate: function (cellData, cellIndex, cellElement) {
+        const cellDate = new Date(cellData.startDate);
+        let today = new Date();
+        today.setHours(0, 0, 0, 0);
+        let maxDate = new Date();
+        maxDate.setDate(today.getDate() + 14);
+
+        if (cellDate < today || cellDate > maxDate) {
+            $(cellElement).css({
+                "background": "repeating-linear-gradient(45deg, #f8d7da, #f8d7da 10px, #ffffff 10px, #ffffff 20px)",
+                "pointer-events": "none",
+                "opacity": "0.5"
+            });
+        }
     }
-},
-// Tambahkan cellTemplate untuk memberi efek arsir pada tanggal yang tidak bisa dipilih
-onContentReady: function(e) {
-    let today = new Date();
-    today.setHours(0, 0, 0, 0);
-    let maxDate = new Date();
-    maxDate.setDate(today.getDate() + 14);
-
-    setTimeout(() => {
-        $(".dx-scheduler-date-table-cell").each(function() {
-            let cellDate = $(this).data("dxCellData")?.startDate;
-            if (cellDate) {
-                cellDate = new Date(cellDate);
-                if (cellDate < today || cellDate > maxDate) {
-                    $(this).css({
-                        "background": "repeating-linear-gradient(45deg, #f8d7da, #f8d7da 10px, #ffffff 10px, #ffffff 20px)",
-                        "pointer-events": "none", // Mencegah interaksi
-                        "opacity": "0.5"
-                    });
-                }
-            }
-        });
-    }, 500);
-}
+});
