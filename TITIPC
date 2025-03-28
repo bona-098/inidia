@@ -43,6 +43,7 @@ class GhmRequestController extends Controller
             return redirect()->route('login');
         }
         $userId = $user->id;
+        \Log::info('Logged-in user_id: '.$userId);
         $isAdmin = $user->isAdmin ?? false;
         $module_id = $this->getModuleId($this->modulename);
         $employeeId = $user->employee_id ?? null;
@@ -107,6 +108,8 @@ class GhmRequestController extends Controller
                 $location = $room ? $locations->firstWhere('id', $room->location_id) : null;
                 $totalPeople = $totalPeopleArray[$request->id] ?? 0;
                 $isMine = $request->user_id === $userId ? 1 : 0;
+                \Log::info('Checking Booking.user_id: '.$request->user_id.' against Logged-in user_id: '.$userId); // Debugging nilai user_id dan userId
+                \Log::info('Booking.user_id: '.$request->user_id.' isMine: '.$isMine.' Logged-in user_id: '.$userId); // Debugging nilai use
                 return [
                     'id' => $request->id,
                     'bu' => $request->bu,
@@ -139,7 +142,7 @@ class GhmRequestController extends Controller
                 'sector' => optional($room)->sector ?? null,
                 'roomOccupancy' => optional($room)->roomOccupancy ?? 0,
                 'location' => optional($location)->Location ?? 'N/A',
-                'roomColor' => '#F0F0F0', // Warna default untuk room, tidak dipengaruhi requestStatus
+                'roomColor' => '#F0F0F0',
             ];
         });
         $uniqueLocations = $roomsWithLocations->pluck('location')->unique()->values();
@@ -157,11 +160,10 @@ class GhmRequestController extends Controller
             'departments' => $departments,
         ]);
     }
-
-    // GHM Request - list Booking 
+    // GHM Request - list Booking
     public function index(Request $request)
     {
-        try {            
+        try {
             $id = $request->id;
             $user_id = $this->getAuth()->id;
             $employeeid = $this->getEmployeeID()->id;
