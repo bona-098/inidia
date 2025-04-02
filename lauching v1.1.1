@@ -340,7 +340,7 @@ $(function () {
                             <b>Approve:</b> ${totalPeople} Person<br>
                             <b>Remaining:</b> ${remainingCapacity} Person<br>
                             <b>Created By:</b> ${booking.creator || "No Name"}<br><br>
-                            ${booking.isMine === 1 ? `<button id="${actionButtonId}" class="btn ${buttonClass} btn-sm">${buttonLabel}</button>` : ""}
+                            ${booking.isMine === "1" ? `<button id="${actionButtonId}" class="btn ${buttonClass} btn-sm">${buttonLabel}</button>` : ""}
                         </div>
                     `;
                     
@@ -475,10 +475,6 @@ $(function () {
                     const form = e.form;
                     const appointmentData = e.appointmentData;
                     let reqid = appointmentData.id;
-                    // let ui = booking.user_id;
-                    // console.log("iM", ui)
-                    // isMine = booking.isMine;
-                    // console.log("iM", isMine)
                     console.log("Appointment Data Before:", appointmentData);
                     if (!reqid) { 
                         let cellData = e.cellData || {};
@@ -628,7 +624,7 @@ $(function () {
                                     label: { text: 'Room' },
                                     editorType: 'dxSelectBox',
                                     dataField: 'ghm_room_id',
-                                    helpText: `Occupancy: ${roomCapacity} | Booked: ${totalBooked} | Remaining: ${remainingCapacity}`,
+                                    helpText: `Occupancy: ${roomCapacity ?? 0} | Booked: ${totalBooked ?? 0} | Remaining: ${remainingCapacity ?? 0}`,
                                     editorOptions: {
                                         readOnly: true,
                                         dataSource: roomsWithLocations,
@@ -789,7 +785,6 @@ $(function () {
                                                 width: 240,
                                                 placeholder: 'Search...',
                                             },
-                                            //tambahkan allow adding - admin bisa menambah dokument (di ghm_request aja)
                                             editing: {
                                                 useIcons: true,
                                                 mode: "popup",
