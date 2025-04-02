@@ -166,7 +166,10 @@ $(function () {
         const filteredRooms = roomsWithLocations.filter(emp => emp.location === location);
         $('#room-selector').dxSelectBox({
             dataSource: filteredRooms,
-            displayExpr: 'text',
+            // displayExpr: 'text',
+            displayExpr: function(item) {
+                return item ? item.text + " | " + item.roomOccupancy + " bed" : "";
+            },
             valueExpr: 'id',
             value: null,
             placeholder: 'Select Room',
@@ -273,7 +276,7 @@ $(function () {
                             }
                         });
                     }
-                },
+                },                
                 groups: ['ghm_room_id'],
                 resources: [
                     {
@@ -295,13 +298,14 @@ $(function () {
                 onAppointmentRendered: function (e) {
                     if (e.appointmentData.requestColor) {
                         e.appointmentElement.css("background-color", e.appointmentData.requestColor);
-                        e.appointmentElement.css("color", "#fff"); // Kontras teks agar terlihat jelas
+                        e.appointmentElement.css("color", "#fff"); 
                     } else {
-                        e.appointmentElement.css("background-color", "#6C757D"); // Default abu-abu jika warna tidak ditemukan
+                        e.appointmentElement.css("background-color", "#6C757D"); 
                     }
                 },
                 appointmentTooltipTemplate: function (model) {
                     const booking = model.appointmentData;
+                    console.log("ba", booking);
                     const room = roomsWithLocations.find(room => room.id === booking.ghm_room_id);
                     const roomOccupancy = room?.roomOccupancy || 0;
                     const guestCount = safeArray(booking.guest).length;
@@ -317,6 +321,7 @@ $(function () {
                     };
                     const actionButtonId = `action-btn-${booking.id}`;
                     const requestStatus = Number(booking.requestStatus);
+                    
                     let buttonLabel = "";
                     let buttonClass = "";
                     if (requestStatus === 0) {
@@ -335,9 +340,10 @@ $(function () {
                             <b>Approve:</b> ${totalPeople} Person<br>
                             <b>Remaining:</b> ${remainingCapacity} Person<br>
                             <b>Created By:</b> ${booking.creator || "No Name"}<br><br>
-                            <button id="${actionButtonId}" class="btn ${buttonClass} btn-sm">${buttonLabel}</button>
+                            ${booking.isMine === 1 ? `<button id="${actionButtonId}" class="btn ${buttonClass} btn-sm">${buttonLabel}</button>` : ""}
                         </div>
                     `;
+                    
                     setTimeout(() => {  
                         const actionButton = document.getElementById(actionButtonId);
                         if (actionButton) {
@@ -425,7 +431,7 @@ $(function () {
                     if (cellDate < today || cellDate > maxDate) {
                         $(cellElement).css({
                             "background": "repeating-linear-gradient(45deg, #f8d7da, #f8d7da 10px, #ffffff 10px, #ffffff 20px)",
-                            "pointer-events": "none", // Mencegah interaksi
+                            "pointer-events": "none",
                             "opacity": "0.5"
                         });
                     }
@@ -442,26 +448,23 @@ $(function () {
                     return combinedColumn;
                 },
                 onCellPrepared: function (e) {
-                    if (e.rowType === "data" && e.dataField === "code") {
+                    if (e.rowType == "data" && e.column.dataField === "code") {
                         const isCodeVisible = e.data.code !== null;
                         $("#formdata").dxDataGrid('columnOption', 'code', 'visible', isCodeVisible);
                     }
-                    // Tambahkan logika untuk mengarsir cell yang disable
-                    if (e.rowType === "data" && e.column.index > 0 && e.column.index < 6) {
+                    if (e.rowType == "data" && (e.column.index > 0 && e.column.index < 6)) {
                         if (!e.value || /^\s*$/.test(e.value)) {
                             e.cellElement.css({
                                 "backgroundColor": "#ffe6e6",
-                                "border": "0.5px solid #f56e6e",
-                                "backgroundImage": "repeating-linear-gradient(45deg, #f56e6e 0, #f56e6e 1px, #ffe6e6 1px, #ffe6e6 5px)",
-                                "backgroundSize": "7px 7px"
+                                "border": "0.5px solid #f56e6e"
                             });
                         }
                     }
-                    if (e.rowType === "data" && e.data.isParent === 1) {
+                    if (e.rowType == "data" && e.data.isParent === 1) {
                         e.cellElement.css('background', 'rgba(128, 128, 0, 0.1)');
                     }
-                },
-                onAppointmentFormOpening: async function (e) {                    
+                }, 
+                onAppointmentFormOpening: async function (e) {              
                     e.popup.option({
                         width: 500,
                         height: 800,
@@ -472,6 +475,10 @@ $(function () {
                     const form = e.form;
                     const appointmentData = e.appointmentData;
                     let reqid = appointmentData.id;
+                    // let ui = booking.user_id;
+                    // console.log("iM", ui)
+                    // isMine = booking.isMine;
+                    // console.log("iM", isMine)
                     console.log("Appointment Data Before:", appointmentData);
                     if (!reqid) { 
                         let cellData = e.cellData || {};
@@ -527,8 +534,7 @@ $(function () {
                             new Date(a.startDate) <= newEndDate &&
                             new Date(a.endDate) >= newStartDate
                         )
-                        .reduce((sum, a) => sum + (Number(a.totalPeople) || 0), 0);
-                
+                        .reduce((sum, a) => sum + (Number(a.totalPeople) || 0), 0);                
                     
                     function validateBooking() {
                         let guestCount = (form.getEditor("guest")?.option("value") || []).length;
@@ -537,13 +543,9 @@ $(function () {
                         let totalGuests = guestCount + familyCount + employeeCount + totalBooked;
                         console.log("total guest", totalGuests);
                         console.log("total booked", totalBooked);
-                        let selectedRoom = form.getEditor("ghm_room_id")?.option("value");
-                        // let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;
-
-                        
+                        let selectedRoom = form.getEditor("ghm_room_id")?.option("value");                        
                         let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;
                         console.log("total Kaps", roomCapacity);
-
                         let remainingCapacity = roomCapacity - totalBooked;
                         if (totalBooked > roomCapacity) {
                             DevExpress.ui.notify({
@@ -761,6 +763,7 @@ $(function () {
                                 },
                             ]
                         },
+                       
                         {
                             itemType: 'group',
                             caption: 'Supporting Document',
@@ -786,7 +789,7 @@ $(function () {
                                                 width: 240,
                                                 placeholder: 'Search...',
                                             },
-                                            //tambahkan allow adding - admin bisa menambah dokument
+                                            //tambahkan allow adding - admin bisa menambah dokument (di ghm_request aja)
                                             editing: {
                                                 useIcons: true,
                                                 mode: "popup",
@@ -863,6 +866,7 @@ $(function () {
                                 }
                             ]
                         }
+                    
                     ]);
                     form.on("fieldDataChanged", function (e) {
                         if (e.dataField === "guest" || e.dataField === "family") {
@@ -893,16 +897,14 @@ $(function () {
                         });
                         e.cancel = true;
                         return;
-                    }
-                
+                    }                
                     let selectedRoom = appointmentData.ghm_room_id;
                     let roomData = roomsWithLocations.find(room => room.id === selectedRoom);
                     if (!roomData) {
                         DevExpress.ui.notify("Room not Found", "error", 3000);
                         e.cancel = true;
                         return;
-                    }
-                
+                    }                
                     let sector = roomData.sector;
                     let bookingData = await loadNewData();
                     let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;
