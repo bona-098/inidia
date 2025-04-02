@@ -557,10 +557,10 @@ $(function () {
                                 }
                             });
                         }
-                        if (totalGuests === 0) {
-                            DevExpress.ui.notify("Setidaknya salah satu dari Employee, Guest, atau Family harus diisi!", "error", 2000);
-                            return false;
-                        }
+                        // if (totalGuests === 0) {
+                        //     DevExpress.ui.notify("Setidaknya salah satu dari Employee, Guest, atau Family harus diisi!", "error", 2000);
+                        //     return false;
+                        // }
 
                         if (totalGuests > roomCapacity) {
                             DevExpress.ui.notify("Jumlah tamu melebihi kapasitas kamar!", "error", 2000);
@@ -1035,20 +1035,10 @@ $(function () {
                     });
                 },
                 onAppointmentUpdating: async function (e) {
-                    $('#btnadd').on('click',function(){
-                        sendRequest(apiurl + "/"+modname, "POST", {requestStatus:0}).then(function(response){
-                            const reqid = response.data.id;
-                            const mode = 'add';
-                            popup.option({
-                                contentTemplate: () => popupContentTemplate(reqid),
-                            });
-                            popup.show();
-                        });
-                    })
                     const appointmentData = e.newData;
                     const oldAppointmentData = e.oldData;
                     const currentStatus = oldAppointmentData.requestStatus;
-                    if (!["0", "2"].includes(currentStatus)) {          
+                    if (![0, 2, null].includes(currentStatus)) {          
                         DevExpress.ui.notify({
                             type: "error",
                             displayTime: 3000,
@@ -1056,7 +1046,7 @@ $(function () {
                                 e.append(`
                                     <div style="white-space: pre-line;">
                                     Action Rejected!\n
-                                    Tidak bisa mengubah request dengan status ini!\n
+                                    Tidak di izinkan melakukan perubahan saat ini!\n
                                     </div>
                                 `);
                             }
