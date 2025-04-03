@@ -1,547 +1,76 @@
-var modname = 'ghmrequest';
-var modelclass = 'ghm';
-var popupmode;
-var dataSubmitted = false; // Flag to track if data has been submitted
+onAppointmentFormOpening: async function (e) {
+    let isAutoPost = false;  // Variabel lokal untuk pengecekan auto POST
 
-// Function to serialize employee_id to JSON
-function serializeToJSON(employeeIds) {
-    return JSON.stringify(employeeIds);
-}
-
-// Function to deserialize JSON to employee_id array
-function deserializeFromJSON(jsonString) {
-    return JSON.parse(jsonString);
-}
-
-$(function() {
-    function submitFormData() {
-        if (dataSubmitted) return; // Prevent duplicate submissions
-
-        dataSubmitted = true;
-        const formData = $('#booking-form').serializeArray();
-        const employeeIdsField = formData.find(field => field.name === 'employee_id');
-        employeeIdsField.value = serializeToJSON(employeeIdsField.value.split(',').map(Number));
-
-        const guestField = formData.find(field => field.name === 'guest');
-        guestField.value = serializeToJSON(guestField.value.split(',').map(name => name.trim()));
-
-        const familyField = formData.find(field => field.name === 'family');
-        familyField.value = serializeToJSON(familyField.value.split(',').map(name => name.trim()));
-
-        sendRequest(apiurl + "/" + modname, "POST", formData).then(function(response) {
-            if (response.status === 'success') {
-                alert('Booking created successfully!');
-                location.reload(); // Reload page to reflect new booking
-            } else {
-                alert('Error: ' + response.message);
-            }
-        }).catch(function(error) {
-            alert('Error: ' + error.responseText);
-        }).finally(function() {
-            dataSubmitted = false; // Reset the flag after submission
-        });
-    }
-
-    $('#booking-form').on('submit', function(event) {
-        event.preventDefault();
-        submitFormData();
-    });
-
-    $('#location-selector').dxSelectBox({
-        dataSource: uniqueLocations,
-        displayExpr: function(item) {
-            return item || "";
-        },
-        valueExpr: function(item) {
-            return item;
-        },
-        value: uniqueLocations[0],
-        onValueChanged: function(e) {
-            const selectedLocation = e.value;
-            updateRoomSelector(selectedLocation);
+    e.popup.option({
+        width: 500,
+        height: 800,
+        onHiding: function () {
+            loadData();
         }
     });
 
-    function updateRoomSelector(location) {
-        const filteredRooms = roomsWithLocations.filter(emp => emp.location === location);
-        $('#room-selector').dxSelectBox({
-            dataSource: filteredRooms,
-            displayExpr: 'text',
-            valueExpr: 'id',
-            value: null,
-            placeholder: 'Select Room',
-            onValueChanged: function(e) {
-                const selectedRoomId = e.value;
-                updateScheduler(location, selectedRoomId);
-            }
+    const form = e.form;
+    const appointmentData = e.appointmentData;
+    let reqid = appointmentData.id;
+
+    // Jika tidak ada ID, lakukan auto POST untuk membuat draft
+    if (!reqid) {
+        isAutoPost = true;  // Tandai bahwa auto POST sedang berlangsung
+
+        const response = await sendRequest(apiurl + "/" + modname, "POST", {
+            requestStatus: 0, // Draft status
+            ghm_room_id: appointmentData.ghm_room_id,
+            startDate: appointmentData.startDate,
+            endDate: appointmentData.endDate,
+            employee: appointmentData.employee,
+            guest: appointmentData.guest,
+            family: appointmentData.family
         });
 
-        updateScheduler(location, null);
-    }
-
-    function updateScheduler(location, roomId) {
-        let dataSource = roomsWithLocations.filter(emp => emp.location === location);
-        if (roomId) {
-            dataSource = dataSource.filter(emp => emp.id === roomId);
+        if (response.status === 'success') {
+            reqid = response.data.id;
+            appointmentData.id = reqid;
+            e.component.updateAppointment(appointmentData, { id: reqid });
+            form.option("formData", appointmentData);
+            form.repaint();
         }
 
-        console.log('Booking Data:', booking); // Debug log for bookings
+        isAutoPost = false;  // Reset flag setelah POST selesai
+    }
 
-        $('.scheduler').dxScheduler({
-            timeZone: 'Asia/Makassar',
-            dataSource: booking,
-            views: ['month'],
-            currentView: 'month',
-            currentDate: new Date(),
-            firstDayOfWeek: 1,
-            showAllDayPanel: false,
-            height: 710,
-            // onCellClick: function(e) {
-            //     e.component.showAppointmentPopup({}, true);
-            // },
-            groups: ['ghm_room_id'],
-            resources: [
-                {
-                    fieldExpr: 'ghm_room_id',
-                    allowMultiple: false,
-                    dataSource: dataSource,
-                    label: 'Room Name',
-                    useColorAsDefault: true
-                },
-            ],
-            editing: {
-                allowAdding: true,
-                allowUpdating: true,
-                allowDeleting: true,
-            },
-            appointmentTooltipTemplate: function(model) {
-                const booking = model.appointmentData;
-                // const booking = model.appointmentData;
-                const formatDate = date => {
-                    if (!date) return "no date";
-                    const d = new Date(date);
-                    return isNaN(d.getTime()) ? "no date" : d.toISOString().split('T')[0];
-                };
-                return `<div>
-                <b>${booking.text || 'No Title'}</b><br>
-                Person: ${booking.person || 'No Person'}<br>
-                ${booking.startDate ? formatDate(booking.startDate) : 'No Start Date'} -
-                ${booking.endDate ? formatDate(booking.endDate) : 'No End Date'}<br>
-                ${booking.creator || 'No Name'}<br>
-                ${booking.creator || 'No Name'}<br>
-                </div>`;
-            },
-            dataCellTemplate: function(cellData, index, container) {
-                const { ghm_room_id } = cellData.groups;
-                const currentTraining = getCurrentTraining(cellData.startDate.getDate(), ghm_room_id);
+    console.log("Appointment Data Before:", appointmentData);
+},
 
-                const wrapper = $('<div>')
-                    .toggleClass(`employee-weekend-${ghm_room_id}`, isWeekEnd(cellData.startDate))
-                    .appendTo(container)
-                    .addClass(`employee-${ghm_room_id}`)
-                    .addClass('dx-template-wrapper');
+onAppointmentUpdating: async function (e) {
+    const appointmentData = e.newData;
+    const oldAppointmentData = e.oldData;
+    const currentStatus = oldAppointmentData.requestStatus;
 
-                wrapper.append($('<div>')
-                    .text(cellData.text)
-                    .text(cellData.roomAccupancy)
-                    .addClass(currentTraining)
-                    .addClass('day-cell'));
-            },
-            resourceCellTemplate: function(cellData) {
-                const name = $('<div>')
-                    .addClass('name')                    
-                    .append($('<h2>').text(cellData.text));
-                
-                const roomAccupancy = $('<div>')
-                    .addClass('roomAccupancy')
-                    .html(`Bed: ${cellData.data.roomAccupancy}`);
-            
-                // Create a parent div to combine name and roomAccupancy into a single column
-                const combinedColumn = $('<div>')
-                .addClass('combined-column')
-                .append(name, roomAccupancy)
-                .css({ backgroundColor: cellData.color });
-            
-                return combinedColumn;
-            },
-            onCellPrepared: function(e) {
-                if (e.column.index == 0 && e.rowType == "data") {
-                    if (e.data.code === null) {
-                        $("#formdata").dxDataGrid('columnOption', 'code', 'visible', false);
-                    } else {
-                        $("#formdata").dxDataGrid('columnOption', 'code', 'visible', true);
-                    }
-                }
-                if (e.rowType == "data" && (e.column.index > 0 && e.column.index < 6)) {
-                    if (e.value === "" || e.value === null || e.value === undefined || /^\s*$/.test(e.value)) {
-                        e.cellElement.css({
-                            "backgroundColor": "#ffe6e6",
-                            "border": "0.5px solid #f56e6e"
-                        });
-                    }
-                }
-                if (e.rowType == "data") {
-                    if (e.data.isParent === 1) {
-                        e.cellElement.css('background', 'rgba(128, 128, 0,0.1)');
-                    }
-                }
-            },
-            onAppointmentFormOpening: function(e) {
-                const form = e.form;
-                const appointmentData = e.appointmentData;
-                const isNewAppointment = !appointmentData.id;
-                console.log('Appointment Data:', appointmentData); // Debug log
-
-                if (appointmentData.employee_id && typeof appointmentData.employee_id === 'string') {
-                    appointmentData.employee_id = deserializeFromJSON(appointmentData.employee_id);
-                }
-                if (appointmentData.guest && typeof appointmentData.guest === 'string') {
-                    console.log(appointmentData.guest)
-                    appointmentData.guest = deserializeFromJSON(appointmentData.guest);
-                    console.log(appointmentData.guest)
-                } else if (!appointmentData.guest) {
-                    appointmentData.guest = []; // Inisialisasi dengan string kosong jika nilai `guest` adalah `null` atau `undefined`
-                }
-                if (appointmentData.family && typeof appointmentData.family === 'string') {
-                    console.log(appointmentData.family)
-                    appointmentData.family = deserializeFromJSON(appointmentData.family);
-                    console.log(appointmentData.family)
-                } else if (!appointmentData.family) {
-                    appointmentData.family = []; // Inisialisasi dengan string kosong jika nilai `family` adalah `null` atau `undefined`
-                }
-                // Define the groupCaptionTemplate function
-                function groupCaptionTemplate(param) {
-                    // Function implementation here
-                    return `Group Caption for ${param}`;
-                }
-                
-                form.option('items', [
-                    {
-                        itemType: 'group',
-                        colCount: 1,
-                        caption: 'Interests',
-                        items: [
-                            {
-                                label: { text: 'Code' },
-                                editorType: 'dxTextBox',
-                                dataField: 'code',
-                                disabled: true,
-                                editorOptions: {
-                                    value: appointmentData.code || ''
-                                }
-                            },
-                            {
-                                label: { text: 'Subject' },
-                                editorType: 'dxTextBox',
-                                dataField: 'text',
-                                editorOptions: {
-                                    value: appointmentData.text || ''
-                                }
-                            },
-                            {
-                                label: { text: 'Description' },
-                                editorType: 'dxTextArea',
-                                dataField: 'description',
-                                editorOptions: {
-                                    value: appointmentData.description || ''
-                                }
-                            },                            
-                        ]
-                    },                
-                    {
-                        itemType: 'group',
-                        caption: 'Room & Date',
-                        items: [
-                            {
-                                label: { text: 'Room' },
-                                editorType: 'dxSelectBox',
-                                dataField: 'ghm_room_id',
-                                editorOptions: {
-                                    dataSource: roomsWithLocations,
-                                    displayExpr: 'text',
-                                    valueExpr: 'id',
-                                    value: appointmentData.ghm_room_id || null
-                                }
-                            },
-                            {
-                                label: { text: 'Start Date' },
-                                editorType: 'dxDateBox',
-                                dataField: 'startDate',
-                                editorOptions: {
-                                    type: 'datetime',
-                                    value: appointmentData.startDate || new Date(),
-                                    displayFormat: 'yyyy-MM-dd HH:mm:ss',
-                                    dateSerializationFormat: 'yyyy-MM-ddTHH:mm:ssZ'
-                                }
-                            },
-                            {
-                                label: { text: 'End Date' },
-                                editorType: 'dxDateBox',
-                                dataField: 'endDate',
-                                editorOptions: {
-                                    type: 'datetime',
-                                    value: appointmentData.endDate || new Date(),
-                                    displayFormat: 'yyyy-MM-dd HH:mm:ss',
-                                    dateSerializationFormat: 'yyyy-MM-ddTHH:mm:ssZ'
-                                }
-                            },
-                        ]
-                    },
-                    {
-                        itemType: 'group',
-                        colSpan: 2,
-                        caption: 'Guest Type',
-                        items: [
-                            {                                
-                                title: 'Employee',
-                                label: { text: 'Employee' },
-                                editorType: 'dxTagBox',
-                                dataField: 'employee_id',
-                                editorOptions: {                                                
-                                    dataSource: emplo,
-                                    displayExpr: 'FullName',
-                                    valueExpr: 'id',
-                                    value: Array.isArray (appointmentData.employee_id) ? appointmentData.employee_id : [],
-                                    showSelectionControls: true,
-                                    applyValueMode: 'useButtons',
-                                    searchEnabled: true
-                                }
-                                
-                            },
-                                    {                                        
-                                        title: 'Guest',
-                                        editorType: 'dxTagBox',
-                                        dataField: 'guest',
-                                        editorOptions: {
-                                            items: Array.isArray(appointmentData.guest) ? appointmentData.guest : [],
-                                            acceptCustomValue: true,
-                                            searchEnabled: true,
-                                            showSelectionControls: true,
-                                            applyValueMode: 'useButtons',
-                                            onCustomItemCreating: function(args) {
-                                                let newValue = args.text;
-                                                let guests = form.option('formData').guest || [];
-                                                if (!guests.includes(newValue)) {
-                                                    guests.push(newValue);
-                                                    args.customItem = newValue;
-                                                } else {
-                                                    args.customItem = null;
-                                                }
-                                                // appointmentData.guest = guests;
-                                                form.updateData('guest', guests);
-                                            }
-                                        }
-                                    },                            
-                                    {
-                                        // label: { text: 'Family' },
-                                        title: 'Family',
-                                        editorType: 'dxTagBox',
-                                        dataField: 'family',
-                                        editorOptions: {
-                                            items: Array.isArray(appointmentData.family) ? appointmentData.family : [],
-                                            acceptCustomValue: true,
-                                            searchEnabled: true,
-                                            showSelectionControls: true,
-                                            applyValueMode: 'useButtons',
-                                            onCustomItemCreating: function(args) {
-                                                let newValue = args.text;
-                                                let familys = form.option('formData').family || [];
-                                                if (!familys.includes(newValue)) {
-                                                    familys.push(newValue);
-                                                    args.customItem = newValue;
-                                                } else {
-                                                    args.customItem = null;
-                                                }
-                                                // appointmentData.family = familys;
-                                                form.updateData('family', familys);
-                                            }
-                                        }
-                                    } 
-                                ]
-                            }
-                        
-                    
-                ]);
-                // console.log(list-employeeall);
-                // Add save and delete buttons to the form
-                form.option('toolbarItems', [
-                    {
-                        widget: 'dxButton',
-                        toolbar: 'bottom',
-                        location: 'after',
-                        options: {
-                            text: isNewAppointment ? 'Save' : 'Update',
-                            onClick: function() {
-                                const formData = form.option('formData');
-                                formData.employee_id = serializeToJSON(formData.employee_id);
-                                formData.guest = formData.guest ? serializeToJSON(formData.guest) : "[]";
-                                formData.family = formData.family ? serializeToJSON(formData.family) : "[]";
-                                if (isNewAppointment) {
-                                    sendRequest(apiurl + "/" + modname, "POST", formData).then(function(response) {
-                                        if (response.status === 'success') {
-                                            e.component._dataSource.reload();
-                                            alert('Booking created successfully!');
-                                        } else {
-                                            alert('Error: ' + response.message);
-                                        }
-                                    }).catch(function(error) {
-                                        alert('Error: ' + error.responseText);
-                                    });
-                                } else {
-                                    formData.id = appointmentData.id; // Ensure id is included in formData
-                                    console.log('Updating appointment with data:', formData); // Debug log
-                                    sendRequest(apiurl + "/" + modname + "/" + formData.id, "PUT", formData).then(function(response) {
-                                        console.log('Response from updating appointment:', response); // Debug log
-                                        if (response.status === 'success') {
-                                            e.component._dataSource.reload();
-                                            alert('Booking updated successfully!');
-                                        } else {
-                                            alert('Error: ' + response.message);
-                                        }
-                                    }).catch(function(error) {
-                                        console.error('Error from updating appointment:', error); // Debug log
-                                        alert('Error: ' + error.responseText);
-                                    });
-                                }
-                                e.component.hideAppointmentPopup();
-                            }
-                        }
-                    },
-                    {
-                        widget: 'dxButton',
-                        toolbar: 'bottom',
-                        location: 'after',
-                        visible: !isNewAppointment, // Make the delete button visible only for existing appointments
-                        options: {
-                            text: 'Delete',
-                            onClick: function() {
-                                console.log('Deleting appointment with ID:', appointmentData.id); // Debug log
-                                if (confirm('Are you sure you want to delete this booking?')) {
-                                    sendRequest(apiurl + "/" + modname + "/" + appointmentData.id, "DELETE").then(function(response) {
-                                        console.log('Response from deleting appointment:', response); // Debug log
-                                        if (response.status === 'success') {
-                                            e.component._dataSource.reload();
-                                            alert('Booking deleted successfully!');
-                                        } else {
-                                            alert('Error: ' + response.message);
-                                        }
-                                    }).catch(function(error) {
-                                        console.error('Error from deleting appointment:', error); // Debug log
-                                        alert('Error: ' + error.responseText);
-                                    });
-                                    e.component.hideAppointmentPopup();
-                                }
-                            }
-                        }
-                    }
-                ]);
-
-                // Ensure the popup can be opened again without refreshing the page
-                e.component.option("onHidden", function() {
-                    form.resetValues ? form.resetValues() : form.option('formData', {}); // Reset form values when popup is hidden
-                    e.component.option("onHidden", null); // Clear the event handler
-                });
-            },
-            onAppointmentDeleting: function(e) {
-                const appointmentData = e.appointmentData;
-                console.log('Deleting appointment data:', appointmentData); // Debug log
-                if (!confirm('Are you sure you want to delete this booking?')) {
-                    e.cancel = true;
-                } else {
-                    sendRequest(apiurl + "/" + modname + "/" + appointmentData.id, "DELETE").then(function(response) {
-                        if (response.status === 'success') {
-                            alert('Booking deleted successfully!');
-                        } else {
-                            alert('Error: ' + response.message);
-                        }
-                    }).catch(function(error) {
-                        alert('Error: ' + error.responseText);
-                    });
-                }
-            },
-            onAppointmentAdding: function(e) {
-                const appointmentData = e.appointmentData;
-                appointmentData.employee_id = serializeToJSON(appointmentData.employee_id);
-                appointmentData.guest = serializeToJSON(appointmentData.guest);
-                appointmentData.family = serializeToJSON(appointmentData.family);
-                sendRequest(apiurl + "/" + modname, "POST", {
-                    requestStatus: 0,
-                    text: appointmentData.text,
-                    description: appointmentData.description,
-                    startDate: appointmentData.startDate,
-                    endDate: appointmentData.endDate,
-                    ghm_room_id: appointmentData.ghm_room_id,
-                    employee_id: appointmentData.employee_id,
-                    guest: appointmentData.guest,
-                    family: appointmentData.family
-                }).then(function(response) {
-                    if (response.status === 'success') {
-                        e.component._dataSource.reload();
-                        alert('Booking created successfully!');
-                    } else {
-                        alert('Error: ' + response.message);
-                    }
-                }).catch(function(error) {
-                    alert('Error: ' + error.responseText);
-                });
-            },
-            onAppointmentUpdating: function(e) {
-                const appointmentData = e.newData;
-                appointmentData.id = e.oldData.id; // Ensure id is included in appointmentData for updating
-                appointmentData.employee_id = serializeToJSON(appointmentData.employee_id);
-                appointmentData.guest = serializeToJSON(appointmentData.guest);
-                appointmentData.family = serializeToJSON(appointmentData.family);
-                console.log('Updating appointment with data:', appointmentData); // Debug log
-                sendRequest(apiurl + "/" + modname + "/" + appointmentData.id, "PUT", {
-                    text: appointmentData.text,
-                    description: appointmentData.description,
-                    startDate: appointmentData.startDate,
-                    endDate: appointmentData.endDate,
-                    ghm_room_id: appointmentData.ghm_room_id,
-                    employee_id: appointmentData.employee_id,
-                    guest: appointmentData.guest,
-                    family: appointmentData.family,
-                    id: appointmentData.id // Ensure id is included in the request body
-                }).then(function(response) {
-                    console.log('Response from updating appointment:', response); // Debug log
-                    if (response.status === 'success') {
-                        e.component._dataSource.reload();
-                        alert('Booking updated successfully!');
-                    } else {
-                        alert('Error: ' + response.message);
-                    }
-                }).catch(function(error) {
-                    console.error('Error from updating appointment:', error); // Debug log
-                    alert('Error: ' + error.responseText);
-                });
+    // Tidak perlu menghentikan update jika ada auto POST
+    // Cek status dan proses update seperti biasa
+    if (![0, 2, "0", null].includes(currentStatus)) {
+        DevExpress.ui.notify({
+            type: "error",
+            displayTime: 3000,
+            contentTemplate: (e) => {
+                e.append(`
+                    <div style="white-space: pre-line;">
+                    Action Rejected!\n
+                    Tidak di izinkan melakukan perubahan saat ini!\n
+                    </div>
+                `);
             }
         });
+        e.cancel = true;
+        return;
     }
 
-    function isWeekEnd(date) {
-        const day = date.getDay();
-        return day === 0 || day === 6;
-    }
+    // Lanjutkan dengan proses update seperti sebelumnya
+    // (validasi dan set data form untuk pembaruan)
+    let selectedRoom = appointmentData.ghm_room_id || null;
+    let newStartDate = new Date(appointmentData.startDate);
+    let newEndDate = new Date(appointmentData.endDate);
+    let appointments = e.component.option("dataSource") || [];                    
 
-    function getCurrentTraining(date, ghm_room_id) {
-        const result = (date + ghm_room_id) % 3;
-        const currentTraining = `training-background-${result}`;
-        return currentTraining;
-    }
-
-    // Initialize room selector with default location
-    updateRoomSelector(uniqueLocations[0]);
-
-    // Add click event handler for add button
-    $('#btnadd').on('click', function() {
-        sendRequest(apiurl + "/" + modname, "POST", { requestStatus: 0 }).then(function(response) {
-            const reqid = response.data.id;
-            const mode = 'add';
-            const options = { "data": { "isMine": 1 } };
-            popup.option({
-                contentTemplate: () => popupContentTemplate(reqid, mode, options),
-            });
-            popup.show();
-        });
-    });
-});
+    // (Lanjutkan dengan logika validasi dan pembaruan yang kamu inginkan)
+}
