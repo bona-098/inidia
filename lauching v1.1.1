@@ -476,7 +476,7 @@ $(function () {
                     const appointmentData = e.appointmentData;
                     let reqid = appointmentData.id;
                     console.log("Appointment Data Before:", appointmentData);
-                    if (!reqid) { 
+                    if (!reqid) {
                         let cellData = e.cellData || {};
                         let ghm_room_id = cellData.ghm_room_id || appointmentData.ghm_room_id;
                         let roomData = roomsWithLocations.find(room => room.id === ghm_room_id);
@@ -557,10 +557,6 @@ $(function () {
                                 }
                             });
                         }
-                        // if (totalGuests === 0) {
-                        //     DevExpress.ui.notify("Setidaknya salah satu dari Employee, Guest, atau Family harus diisi!", "error", 2000);
-                        //     return false;
-                        // }
 
                         if (totalGuests > roomCapacity) {
                             DevExpress.ui.notify("Jumlah tamu melebihi kapasitas kamar!", "error", 2000);
@@ -1038,7 +1034,7 @@ $(function () {
                     const appointmentData = e.newData;
                     const oldAppointmentData = e.oldData;
                     const currentStatus = oldAppointmentData.requestStatus;
-                    if (![0, 2, null].includes(currentStatus)) {          
+                    if (![0, 2, "0", null].includes(currentStatus)) {          
                         DevExpress.ui.notify({
                             type: "error",
                             displayTime: 3000,
@@ -1187,12 +1183,12 @@ $(function () {
                                                 });
                                             }
                                         });
-                                    } 
+                                    }
                                 }
                             });
                         }
                     });
-                }  
+                }
             }).dxScheduler("instance");
         });
     }
