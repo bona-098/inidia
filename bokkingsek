@@ -1,38 +1,77 @@
-onAppointmentUpdating: async function (e) {
-    console.log("onAppointmentUpdating triggered");
-    console.log("e.newData:", JSON.stringify(e.newData));
-    console.log("e.oldData:", JSON.stringify(e.oldData));
+onAppointmentFormOpening: async function (e) {
+    console.log("🔵 Form Opening Triggered");
+
+    const form = e.form;
+    const appointmentData = e.appointmentData;
+    let reqid = appointmentData.id;
+
+    if (!reqid) { // Jika form baru (Auto Post)
+        console.log("🟢 Auto Post Triggered");
+        
+        let cellData = e.cellData || {};
+        let ghm_room_id = cellData.ghm_room_id || appointmentData.ghm_room_id;
+        let startDate = cellData.startDate || appointmentData.startDate;
+        let endDate = cellData.endDate || appointmentData.endDate;
+
+        if (ghm_room_id && startDate && endDate) {
+            appointmentData.isAutoPost = true; // Tandai sebagai auto post
+            
+            await sendRequest(apiurl + "/" + modname, "POST", {
+                requestStatus: 0,
+                ghm_room_id,
+                startDate,
+                endDate,
+                sector: null,
+                employee: cellData.employee || [],
+                guest: cellData.guest || [],
+                family: cellData.family || []
+            }).then(function(response) {
+                console.log("✅ Auto Post Success:", response);
+
+                if (response.status === 'success') {
+                    reqid = response.data.id;
+                    appointmentData.id = reqid;
+                    e.component.updateAppointment(appointmentData, { id: reqid, isAutoPost: true });
+                    form.option("formData", appointmentData);
+                    form.repaint();
+                } else {
+                    DevExpress.ui.notify("Gagal mendapatkan ID!", "error", 3000);
+                }
+            }).catch(function(error) {
+                console.error("❌ Auto Post Error:", error);
+            });
+        }
+    }
+
+    console.log("🔵 Form Opened - isAutoPost:", appointmentData.isAutoPost);
+}
+================================
+onAppointmentUpdating: function (e) {
+    console.log("🟠 Updating Triggered - Checking Auto Post");
+    console.log("e.newData:", e.newData);
+    console.log("e.oldData:", e.oldData);
 
     const appointmentData = e.newData;
     const oldAppointmentData = e.oldData;
     const currentStatus = oldAppointmentData.requestStatus;
 
-    if (typeof appointmentData.isAutoPost === "undefined") {
-        appointmentData.isAutoPost = oldAppointmentData.isAutoPost || false;
+    // **CEGAH ERROR JIKA AUTO POST**
+    if (appointmentData.isAutoPost) {
+        console.log("🟢 Auto Post Detected - Skipping Error Notification");
+        return; // Jangan munculkan error jika auto post
     }
 
-    console.log("isAutoPost in onAppointmentUpdating:", appointmentData.isAutoPost);
+    // **TAMPILKAN ERROR JIKA STATUS TIDAK BOLEH DIUBAH**
+    if (![0, 2, "0", null, 'undefined'].includes(currentStatus)) {
+        console.log("❌ Update Rejected - Status:", currentStatus);
 
-    // Perbaiki logika pengecekan
-    if (![0, 2, "0", null, 'undefined'].includes(currentStatus) && appointmentData.isAutoPost !== true) {
-        console.log("❌ Update Rejected - Invalid Status");
-
-        DevExpress.ui.notify({
-            type: "error",
-            displayTime: 3000,
-            contentTemplate: (e) => {
-                e.append(`
-                    <div style="white-space: pre-line;">
-                        Action Rejected!\n
-                        Tidak diizinkan melakukan perubahan saat ini!\n
-                    </div>
-                `);
-            }
+        Swal.fire({
+            icon: "error",
+            title: "Action Rejected!",
+            text: "Tidak diizinkan melakukan perubahan saat ini!",
+            confirmButtonText: "OK"
         });
 
         e.cancel = true;
-        return;
     }
-
-    console.log("✅ Update Allowed - Proceeding...");
 }
