@@ -1,54 +1,78 @@
 onAppointmentFormOpening: async function (e) {
-    let isAutoPost = false;  // Variabel lokal untuk pengecekan auto POST
-
-    e.popup.option({
-        width: 500,
-        height: 800,
-        onHiding: function () {
-            loadData();
-        }
-    });
-
     const form = e.form;
     const appointmentData = e.appointmentData;
     let reqid = appointmentData.id;
 
-    // Jika tidak ada ID, lakukan auto POST untuk membuat draft
+    // Set the isAutoPost flag in the form context to avoid checking status during auto post
+    e.isAutoPost = false; // Default value
+    
+    // If it's a new appointment, we create a new entry
     if (!reqid) {
-        isAutoPost = true;  // Tandai bahwa auto POST sedang berlangsung
+        let cellData = e.cellData || {};
+        let ghm_room_id = cellData.ghm_room_id || appointmentData.ghm_room_id;
+        let roomData = roomsWithLocations.find(room => room.id === ghm_room_id);
+        let sector = roomData ? roomData.sector : null;
+        let startDate = cellData.startDate || appointmentData.startDate;
+        let endDate = cellData.endDate || appointmentData.endDate;
 
-        const response = await sendRequest(apiurl + "/" + modname, "POST", {
-            requestStatus: 0, // Draft status
-            ghm_room_id: appointmentData.ghm_room_id,
-            startDate: appointmentData.startDate,
-            endDate: appointmentData.endDate,
-            employee: appointmentData.employee,
-            guest: appointmentData.guest,
-            family: appointmentData.family
-        });
+        if (ghm_room_id && startDate && endDate) {
+            // Make the POST request to create a new entry
+            const response = await sendRequest(apiurl + "/" + modname, "POST", {
+                requestStatus: 0,
+                ghm_room_id: ghm_room_id,
+                startDate: startDate,
+                endDate: endDate,
+                sector: sector,
+                employee: cellData.employee || appointmentData.employee || [],
+                guest: cellData.guest || appointmentData.guest || [],
+                family: cellData.family || appointmentData.family || []
+            }).then(function (response) {
+                console.log("Response from POST request:", response);
+                if (response.status === 'success') {
+                    reqid = response.data.id;
+                    appointmentData.id = reqid;
+                    e.component.updateAppointment(appointmentData, { id: reqid });
+                    form.option("formData", appointmentData);
+                    form.repaint();
 
-        if (response.status === 'success') {
-            reqid = response.data.id;
-            appointmentData.id = reqid;
-            e.component.updateAppointment(appointmentData, { id: reqid });
-            form.option("formData", appointmentData);
-            form.repaint();
+                    // Set isAutoPost to true to signal that the form was auto-posted
+                    e.isAutoPost = true; // Set flag to true
+                } else {
+                    DevExpress.ui.notify("Gagal mendapatkan ID!", "error", 3000);
+                }
+            }).catch(function (error) {
+                console.error("Error during POST request:", error);
+            });
+        } else {
+            console.error("Required data is missing");
         }
 
-        isAutoPost = false;  // Reset flag setelah POST selesai
+        // Prevent form from closing until we handle the auto post
+        dataSubmitted = false;
+        if (e.event) {
+            e.event.preventDefault();
+        } else {
+            console.error("event is undefined");
+        }
     }
 
-    console.log("Appointment Data Before:", appointmentData);
-},
+    console.log("Updated Appointment Data:", appointmentData);
+    console.log("Final Req ID:", appointmentData.id);
 
+    // Validate booking and availability
+    const { roomCapacity, remainingCapacity } = validateBooking();
+
+    // Modify form options based on the validation
+    form.option('items', [/* modified items */]);
+}
+==============
 onAppointmentUpdating: async function (e) {
     const appointmentData = e.newData;
     const oldAppointmentData = e.oldData;
     const currentStatus = oldAppointmentData.requestStatus;
-
-    // Tidak perlu menghentikan update jika ada auto POST
-    // Cek status dan proses update seperti biasa
-    if (![0, 2, "0", null].includes(currentStatus)) {
+    
+    // Avoid checking status when auto post is happening
+    if (![0, 2, "0", null, 'undefined'].includes(currentStatus) && !e.isAutoPost) {
         DevExpress.ui.notify({
             type: "error",
             displayTime: 3000,
@@ -65,12 +89,145 @@ onAppointmentUpdating: async function (e) {
         return;
     }
 
-    // Lanjutkan dengan proses update seperti sebelumnya
-    // (validasi dan set data form untuk pembaruan)
-    let selectedRoom = appointmentData.ghm_room_id || null;
-    let newStartDate = new Date(appointmentData.startDate);
-    let newEndDate = new Date(appointmentData.endDate);
-    let appointments = e.component.option("dataSource") || [];                    
+    // Continue with the other appointment update logic
+    let selectedRoom = appointmentData.ghm_room_id;
+    let bookingData = await loadNewData();
+    let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;
+    let dailyGuestCount = await getTotalGuestsPerDay(
+        bookingData.filter(b => b.requestStatus != 4 && b.requestStatus != 0 && b.requestStatus != 2 && b.requestStatus != 1),
+        selectedRoom,
+        appointmentData.startDate,
+        appointmentData.endDate
+    );
+    let guestCount = safeArray(appointmentData.guest).length;
+    let familyCount = safeArray(appointmentData.family).length;
+    let employeeCount = safeArray(appointmentData.employee).length;
+    let totalNewGuests = guestCount + familyCount + employeeCount;
+    let totalGuestsAfterUpdating = (dailyGuestCount || 0) + totalNewGuests;
 
-    // (Lanjutkan dengan logika validasi dan pembaruan yang kamu inginkan)
+    if (totalGuestsAfterUpdating > roomCapacity) {
+        Swal.fire({
+            title: '<strong>UPS...</strong>',
+            html: `
+                <div style="white-space: no wrap; overflow: hidden; text-overflow: ellipsis;">
+                    The room is full, please select another room or another date!<br>
+                    kamar sudah penuh, silahkan pilih kamar lain atau tanggal lain!
+                </div>
+            `,
+            icon: 'error',
+            confirmButtonText: 'OK',
+        });
+        e.cancel = true;
+        loadData();
+        return;
+    }
+
+    const formatDateForDB = (date) => {
+        const d = new Date(date);
+        return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
+    };
+
+    appointmentData.startDate = formatDateForDB(appointmentData.startDate);
+    appointmentData.endDate = formatDateForDB(appointmentData.endDate);
+    appointmentData.id = e.oldData.id;
+    let requestStatus = 0;
+    let reqid = appointmentData.id;
+
+    Swal.fire({
+        title: 'What do you want to do?',
+        text: 'Choose an option for this booking',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Submit Now',
+        cancelButtonText: 'Save as Draft',
+        reverseButtons: true
+    }).then((result) => {
+        let requestStatus = 0;
+        if (!result.isConfirmed) {
+            sendRequest(apiurl + "/" + modname + "/" + reqid, "PUT", {
+                requestStatus: requestStatus,
+                text: appointmentData.text,
+                description: appointmentData.description,
+                startDate: appointmentData.startDate,
+                endDate: appointmentData.endDate,
+                ghm_room_id: appointmentData.ghm_room_id,
+                employee: appointmentData.employee,
+                guest: appointmentData.guest,
+                family: appointmentData.family,
+                id: appointmentData.id
+            }).then(function () {
+                loadData();
+            });
+        } else {
+            sendRequest(apiurl + "/" + modname + "/" + reqid, "PUT", {
+                requestStatus: requestStatus,
+                text: appointmentData.text,
+                description: appointmentData.description,
+                startDate: appointmentData.startDate,
+                endDate: appointmentData.endDate,
+                ghm_room_id: appointmentData.ghm_room_id,
+                employee: appointmentData.employee,
+                guest: appointmentData.guest,
+                family: appointmentData.family,
+                id: appointmentData.id
+            }).then(function (response) {
+                let valapprovalAction = null;
+                let actionForm = 'submission';
+                let valApprovalType = '';
+                let valremarks = '';
+                let guestCount = safeArray(appointmentData.guest).length;
+                let familyCount = safeArray(appointmentData.family).length;
+
+                if (response.status == 'success') {
+                    console.log("reqid", reqid);
+                    console.log("family", familyCount);
+                    console.log("guestCount", guestCount);
+                    if (familyCount > 0 || guestCount > 0) {
+                        sendRequest(apiurl + "/checkattachmentghm", "POST", {
+                            req_id: reqid,
+                            modelname: modelclass,
+                            countfamily: familyCount,
+                            countguest: guestCount
+                        }).then(function (response) {
+                            if (response.status == 'success') {
+                                sendRequest(apiurl + "/submissionrequest/" + reqid + "/" + modelclass, "POST", {
+                                    requestStatus: 1,
+                                    action: actionForm,
+                                    approvalAction: (valapprovalAction == null) ? 1 : parseInt(valapprovalAction),
+                                    approvalType: valApprovalType,
+                                    remarks: valremarks
+                                }).then(function (response) {
+                                    if (response.status == 'success') {
+                                        loadData();
+                                        Swal.fire({
+                                            icon: 'success',
+                                            title: 'Saved',
+                                            text: 'The submission has been submitted.',
+                                        });
+                                    }
+                                });
+                            }
+                        })
+                    } else {
+                        sendRequest(apiurl + "/submissionrequest/" + reqid + "/" + modelclass, "POST", {
+                            requestStatus: 1,
+                            action: actionForm,
+                            approvalAction: (valapprovalAction == null) ? 1 : parseInt(valapprovalAction),
+                            approvalType: valApprovalType,
+                            remarks: valremarks
+                        }).then(function (response) {
+                            if (response.status == 'success') {
+                                loadData();
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Saved',
+                                    text: 'The submission has been submitted.',
+                                });
+                            }
+                        });
+                    }
+                }
+            });
+        }
+    });
 }
