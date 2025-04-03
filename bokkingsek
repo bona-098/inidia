@@ -4,10 +4,6 @@ onAppointmentFormOpening: async function (e) {
     const appointmentData = e.appointmentData;
     let reqid = appointmentData.id;
 
-    // Set isAutoPost flag
-    e.isAutoPost = false; // Default to false
-    console.log("Initial isAutoPost:", e.isAutoPost);
-
     if (!reqid) {
         let cellData = e.cellData || {};
         let ghm_room_id = cellData.ghm_room_id || appointmentData.ghm_room_id;
@@ -36,11 +32,11 @@ onAppointmentFormOpening: async function (e) {
                 if (response.status === 'success') {
                     reqid = response.data.id;
                     appointmentData.id = reqid;
+                    appointmentData.isAutoPost = true; // Tambahkan flag ke dalam data
                     e.component.updateAppointment(appointmentData, { id: reqid });
                     form.option("formData", appointmentData);
                     form.repaint();
-                    e.isAutoPost = true;
-                    console.log("Auto Post Successful, isAutoPost set to:", e.isAutoPost);
+                    console.log("Auto Post Successful, isAutoPost set to:", appointmentData.isAutoPost);
                 } else {
                     DevExpress.ui.notify("Failed to retrieve ID!", "error", 3000);
                 }
@@ -50,28 +46,25 @@ onAppointmentFormOpening: async function (e) {
         } else {
             console.error("Required data is missing for Auto Post");
         }
-
-        if (e.event) {
-            e.event.preventDefault();
-        }
     }
 
     console.log("Updated Appointment Data:", appointmentData);
-    console.log("Final Req ID:", appointmentData.id);
-},
-
+}
+============================
 onAppointmentUpdating: async function (e) {
     console.log("onAppointmentUpdating triggered");
     console.log("Appointment Data:", e.newData);
     console.log("Old Data:", e.oldData);
-    console.log("isAutoPost:", e.isAutoPost);
 
     const appointmentData = e.newData;
     const oldAppointmentData = e.oldData;
     const currentStatus = oldAppointmentData.requestStatus;
 
-    // Check if update should be blocked
-    if (![0, 2, "0", null, 'undefined'].includes(currentStatus) && !e.isAutoPost) {
+    // Periksa isAutoPost dari appointmentData
+    let isAutoPost = appointmentData.isAutoPost || false;
+    console.log("isAutoPost:", isAutoPost);
+
+    if (![0, 2, "0", null, 'undefined'].includes(currentStatus) && !isAutoPost) {
         console.log("Update Rejected - Invalid Status or not Auto Post");
         DevExpress.ui.notify({
             type: "error",
@@ -89,48 +82,5 @@ onAppointmentUpdating: async function (e) {
         return;
     }
 
-    console.log("Processing Update...");
-
-    // Room capacity validation
-    let selectedRoom = appointmentData.ghm_room_id;
-    let bookingData = await loadNewData();
-    let roomCapacity = roomsWithLocations.find(room => room.id === selectedRoom)?.roomOccupancy || 0;
-    let dailyGuestCount = await getTotalGuestsPerDay(
-        bookingData.filter(b => b.requestStatus != 4 && b.requestStatus != 0 && b.requestStatus != 2 && b.requestStatus != 1),
-        selectedRoom,
-        appointmentData.startDate,
-        appointmentData.endDate
-    );
-
-    let guestCount = safeArray(appointmentData.guest).length;
-    let familyCount = safeArray(appointmentData.family).length;
-    let employeeCount = safeArray(appointmentData.employee).length;
-    let totalNewGuests = guestCount + familyCount + employeeCount;
-    let totalGuestsAfterUpdating = (dailyGuestCount || 0) + totalNewGuests;
-
-    console.log("Room Capacity:", roomCapacity);
-    console.log("Total Guests After Update:", totalGuestsAfterUpdating);
-
-    if (totalGuestsAfterUpdating > roomCapacity) {
-        console.log("Update Rejected - Room Capacity Exceeded");
-        Swal.fire({
-            title: '<strong>UPS...</strong>',
-            html: `
-                <div style="white-space: no wrap; overflow: hidden; text-overflow: ellipsis;">
-                    The room is full, please select another room or another date!<br>
-                    kamar sudah penuh, silahkan pilih kamar lain atau tanggal lain!
-                </div>
-            `,
-            icon: 'error',
-            confirmButtonText: 'OK',
-        });
-        e.cancel = true;
-        loadData();
-        return;
-    }
-
     console.log("Update Allowed - Proceeding...");
-    appointmentData.startDate = formatDateForDB(appointmentData.startDate);
-    appointmentData.endDate = formatDateForDB(appointmentData.endDate);
-    appointmentData.id = e.oldData.id;
 }
