@@ -7,36 +7,34 @@ onAppointmentFormOpening: async function (e) {
     if (!reqid) {
         let cellData = e.cellData || {};
         let ghm_room_id = cellData.ghm_room_id || appointmentData.ghm_room_id;
-        let roomData = roomsWithLocations.find(room => room.id === ghm_room_id);
-        let sector = roomData ? roomData.sector : null;
         let startDate = cellData.startDate || appointmentData.startDate;
         let endDate = cellData.endDate || appointmentData.endDate;
-
-        console.log("Auto Post Data:", { ghm_room_id, startDate, endDate, sector });
 
         if (ghm_room_id && startDate && endDate) {
             try {
                 const response = await sendRequest(apiurl + "/" + modname, "POST", {
-                    requestStatus: 0, // Status 'Draft'
+                    requestStatus: 0, 
                     ghm_room_id: ghm_room_id,
                     startDate: startDate,
                     endDate: endDate,
-                    sector: sector,
                     employee: cellData.employee || appointmentData.employee || [],
                     guest: cellData.guest || appointmentData.guest || [],
                     family: cellData.family || appointmentData.family || []
                 });
 
-                console.log("Response from Auto Post:", response);
-
                 if (response.status === 'success') {
                     reqid = response.data.id;
                     appointmentData.id = reqid;
-                    appointmentData.isAutoPost = true; // Tambahkan flag ke dalam data
+                    appointmentData.isAutoPost = true;  // Tambahkan flag
+                    
+                    console.log("Before updateAppointment (isAutoPost = true):", appointmentData);
+
                     e.component.updateAppointment(appointmentData, { id: reqid });
+
+                    console.log("After updateAppointment:", e.component.option("dataSource"));
+
                     form.option("formData", appointmentData);
                     form.repaint();
-                    console.log("Auto Post Successful, isAutoPost set to:", appointmentData.isAutoPost);
                 } else {
                     DevExpress.ui.notify("Failed to retrieve ID!", "error", 3000);
                 }
@@ -48,24 +46,27 @@ onAppointmentFormOpening: async function (e) {
         }
     }
 
-    console.log("Updated Appointment Data:", appointmentData);
+    console.log("Final Appointment Data Before Submit:", appointmentData);
 }
-============================
+==============
 onAppointmentUpdating: async function (e) {
     console.log("onAppointmentUpdating triggered");
-    console.log("Appointment Data:", e.newData);
-    console.log("Old Data:", e.oldData);
+    console.log("e.newData:", JSON.stringify(e.newData));
+    console.log("e.oldData:", JSON.stringify(e.oldData));
 
     const appointmentData = e.newData;
     const oldAppointmentData = e.oldData;
     const currentStatus = oldAppointmentData.requestStatus;
 
-    // Periksa isAutoPost dari appointmentData
-    let isAutoPost = appointmentData.isAutoPost || false;
-    console.log("isAutoPost:", isAutoPost);
+    // **Pastikan isAutoPost tidak hilang**
+    if (typeof appointmentData.isAutoPost === "undefined") {
+        appointmentData.isAutoPost = oldAppointmentData.isAutoPost || false;
+    }
 
-    if (![0, 2, "0", null, 'undefined'].includes(currentStatus) && !isAutoPost) {
-        console.log("Update Rejected - Invalid Status or not Auto Post");
+    console.log("isAutoPost in onAppointmentUpdating:", appointmentData.isAutoPost);
+
+    if (![0, 2, "0", null, 'undefined'].includes(currentStatus) && !appointmentData.isAutoPost) {
+        console.log("Update Rejected - Invalid Status");
         DevExpress.ui.notify({
             type: "error",
             displayTime: 3000,
@@ -73,7 +74,7 @@ onAppointmentUpdating: async function (e) {
                 e.append(`
                     <div style="white-space: pre-line;">
                         Action Rejected!\n
-                        Tidak di izinkan melakukan perubahan saat ini!\n
+                        Tidak diizinkan melakukan perubahan saat ini!\n
                     </div>
                 `);
             }
