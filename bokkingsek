@@ -9,19 +9,19 @@ onAppointmentUpdating: function (e) {
     console.log("📄 Old Appointment Data:", oldAppointmentData);
     console.log("🔍 Current Status:", currentStatus);
 
-    // **Cek apakah ini Auto Post**
+    // **Langsung return jika auto post sedang terjadi**
     if (appointmentData.isAutoPost) {
-        console.log("🟢 Auto Post Detected - Skipping Error Notification");
-        return; // Jangan munculkan error jika auto post
-    }
-
-    // **Kalau oldData kosong (berarti auto post), langsung return tanpa validasi status**
-    if (!Object.keys(oldAppointmentData).length) {
-        console.log("🟢 Auto Post - No Old Data Found");
+        console.log("🟢 Skipping Validation - Auto Post Detected");
         return;
     }
 
-    // **TAMPILKAN ERROR JIKA STATUS TIDAK BOLEH DIUBAH**
+    // **Cek apakah ini data baru (belum ada di database)**
+    if (!oldAppointmentData.id) {
+        console.log("🟢 Skipping Validation - Data Baru (Belum Ada di DB)");
+        return;
+    }
+
+    // **Validasi hanya jika auto post sudah selesai dan data sudah ada**
     if (![0, 2, "0", null].includes(currentStatus)) {
         console.error("❌ Update Rejected - Status:", currentStatus);
 
