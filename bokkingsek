@@ -1,102 +1,52 @@
+if (!reqid) { 
+                        let cellData = e.cellData || {};
+                        let ghm_room_id = cellData.ghm_room_id || appointmentData.ghm_room_id;
+                        let roomData = roomsWithLocations.find(room => room.id === ghm_room_id);
+                        let sector = roomData ? roomData.sector : null;
+                        let startDate = cellData.startDate || appointmentData.startDate;
+                        let endDate = cellData.endDate || appointmentData.endDate;
+                        let isNew = appointmentData.isNew;
+                        if (ghm_room_id && startDate && endDate) {
+                            const response = await sendRequest(apiurl + "/" + modname, "POST", {
+                                requestStatus: 0,
+                                // isNew : 1,
+                                ghm_room_id: ghm_room_id,
+                                startDate: startDate,
+                                endDate: endDate,
+                                sector: sector,
+                                employee: cellData.employee || appointmentData.employee || [],
+                                guest: cellData.guest || appointmentData.guest || [],
+                                family: cellData.family || appointmentData.family || []
+                            }).then(function(response) {
+                                console.log("Response from POST request:", response);                                
+                                if (response.status === 'success') {
+                                    reqid = response.data.id;
+                                    appointmentData.id = reqid;                             
+                                    isNew = 1;     
+                                    console.log("ain", isNew);   
+                                    form.option("formData", appointmentData);
+                                    form.repaint();
+                                } else {
+                                    DevExpress.ui.notify("Gagal mendapatkan ID!", "error", 3000);
+                                }
+                            }).catch(function(error) {
+                                console.error("Error during POST request:", error);
+                            });
+                        } else {
+                            console.error("Required data is missing");
+                        }
+
+                        dataSubmitted = false;
+                        if (e.event) {
+                            e.event.preventDefault();
+                        } else {
+                            console.error("event is undefined");
+                        }
+                    }
+
 {
                             itemType: 'group',
                             caption: 'Supporting Document',
                             colSpan: 2,
-                            visible: appointmentData.isMine === "1" || appointmentData.isHrsl === "1" ? true : false,
+                            visible: (appointmentData.isNew == 1) || appointmentData.isMine === "1" || appointmentData.isHrsl === "1" ? true : false,
                             items: [
-                                {
-                                    itemType: 'simple',
-                                    name: "supportingDocument",
-                                    template: function (data, container) {
-                                        var supporting = $("<div id='formattachment'>").dxDataGrid({
-                                            dataSource: storewithmodule('attachmentrequest', modelclass, reqid),
-                                            allowColumnReordering: true,
-                                            allowColumnResizing: true,
-                                            columnsAutoWidth: true,
-                                            rowAlternationEnabled: true,
-                                            wordWrapEnabled: true,
-                                            showBorders: true,
-                                            filterRow: { visible: false },
-                                            filterPanel: { visible: false },
-                                            headerFilter: { visible: false },
-                                            searchPanel: {
-                                                visible: true,
-                                                width: 240,
-                                                placeholder: 'Search...',
-                                            },
-                                            editing: {
-                                                useIcons: true,
-                                                mode: "popup",
-                                                allowAdding: true,
-                                                allowUpdating: true,
-                                                allowDeleting: true,
-                                            },
-                                            paging: { enabled: true, pageSize: 10 },
-                                            columns: [
-                                                {
-                                                    caption: 'Attachment',
-                                                    dataField: "path",
-                                                    allowFiltering: false,
-                                                    allowSorting: false,
-                                                    cellTemplate: cellTemplate,
-                                                    editCellTemplate: editCellTemplate,
-                                                    validationRules: [
-                                                        {
-                                                            type: "custom",
-                                                            validationCallback: function (params) {
-                                                                let formData = form.option("formData");
-                                                                let hasGuestOrFamily =
-                                                                    (formData.guest && formData.guest.length > 0) ||
-                                                                    (formData.family && formData.family.length > 0);
-                
-                                                                return !hasGuestOrFamily || (params.value && params.value.length > 0);
-                                                            },
-                                                            message: "Attachment is required when Guest or Family is selected."
-                                                        }
-                                                    ]
-                                                },
-                                                {
-                                                    dataField: "remarks",
-                                                    lookup: {
-                                                        dataSource: ['KTP','KK','Supporting Document'],
-                                                        searchEnabled: false
-                                                    },
-                                                    validationRules: [{ type: "required" }]
-                                                },
-                                            ],
-                                            export: {
-                                                enabled: false,
-                                                fileName: modname,
-                                                excelFilterEnabled: true,
-                                                allowExportSelectedData: true
-                                            },
-                                            onInitialized: function (e) {
-                                                dataGridAttachment = e.component;
-                                            },
-                                            onContentReady: function (e) {
-                                                moveEditColumnToLeft(e.component);
-                                            },
-                                            onToolbarPreparing: function (e) {
-                                                e.toolbarOptions.items.unshift({
-                                                    location: "after",
-                                                    widget: "dxButton",
-                                                    options: {
-                                                        hint: "Refresh Data",
-                                                        icon: "refresh",
-                                                        onClick: function () {
-                                                            dataGridAttachment.refresh();
-                                                        }
-                                                    }
-                                                });
-                                            },
-                                            onDataErrorOccurred: function (e) {
-                                                console.log("Error loading data:", e.error.message);
-                                                dataGridAttachment.refresh();
-                                            }
-                                        });
-                
-                                        return supporting;
-                                    }
-                                }
-                            ]
-                        }
