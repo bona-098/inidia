@@ -1,9 +1,24 @@
 {
-                                    label: { text: 'Details' },
-                                    editorType: 'dxTextArea',
-                                    dataField: 'description',
-                                    editorOptions: {
-                                        value: appointmentData.description || ''
-                                    },
-                                    validationRules: [{ type: "required", message: 'Details is required', }],
-                                }
+    label: { text: 'Details' },
+    editorType: 'dxTextArea',
+    dataField: 'description',
+    editorOptions: {
+        value: appointmentData.description || ''
+    },
+    validationRules: [{ type: "required", message: 'Details is required' }],
+},
+{
+    itemType: 'simple',
+    template: function (data, itemElement) {
+        $('<div>')
+            .dxCheckBox({
+                text: 'Checklist for something (e.g. fee 1.5)',
+                value: appointmentData.someFlag || false, // bisa di-bind ke properti
+                onValueChanged: function (e) {
+                    // misalnya simpan nilai float di appointmentData
+                    appointmentData.floatValue = e.value ? 1.5 : 0.0;
+                }
+            })
+            .appendTo(itemElement);
+    }
+}
