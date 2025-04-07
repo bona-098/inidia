@@ -1,0 +1,9 @@
+{
+                                    label: { text: 'Details' },
+                                    editorType: 'dxTextArea',
+                                    dataField: 'description',
+                                    editorOptions: {
+                                        value: appointmentData.description || ''
+                                    },
+                                    validationRules: [{ type: "required", message: 'Details is required', }],
+                                }
