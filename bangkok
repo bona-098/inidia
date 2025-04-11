@@ -1,24 +1,56 @@
-{
-    label: { text: 'Details' },
-    editorType: 'dxTextArea',
-    dataField: 'description',
-    editorOptions: {
-        value: appointmentData.description || ''
-    },
-    validationRules: [{ type: "required", message: 'Details is required' }],
-},
-{
-    itemType: 'simple',
-    template: function (data, itemElement) {
-        $('<div>')
-            .dxCheckBox({
-                text: 'Checklist for something (e.g. fee 1.5)',
-                value: appointmentData.someFlag || false, // bisa di-bind ke properti
-                onValueChanged: function (e) {
-                    // misalnya simpan nilai float di appointmentData
-                    appointmentData.floatValue = e.value ? 1.5 : 0.0;
-                }
-            })
-            .appendTo(itemElement);
+appointmentTooltipTemplate: function (model) {
+    const booking = model.appointmentData;
+    const room = roomsWithLocations.find(room => room.id === booking.ghm_room_id);
+    const roomOccupancy = room?.roomOccupancy || 0;
+    const appointments = model.component.option("dataSource") || [];
+
+    const selectedRoom = booking.ghm_room_id || null;
+    const newStartDate = new Date(booking.startDate);
+    const newEndDate = new Date(booking.endDate);
+
+    // Total booked orang berdasarkan overlapping booking di ruangan yang sama
+    const totalBooked = appointments
+        .filter(a =>
+            a.ghm_room_id === selectedRoom &&
+            new Date(a.startDate) <= newEndDate &&
+            new Date(a.endDate) >= newStartDate
+        )
+        .reduce((sum, a) => sum + (Number(a.totalPeople) || 0), 0);
+
+    const remainingCapacity = roomOccupancy - totalBooked;
+
+    const formatDate = (date) => {
+        if (!date) return "No Date";
+        const d = new Date(date);
+        return isNaN(d.getTime()) ? "No Date" : d.toISOString().split("T")[0];
+    };
+
+    const actionButtonId = `action-btn-${booking.id}`;
+    const requestStatus = Number(booking.requestStatus);
+
+    let buttonLabel = "";
+    let buttonClass = "";
+    if (requestStatus === 0) {
+        buttonLabel = "Delete";
+        buttonClass = "btn-danger";
+    } else if ([1, 2, 3].includes(requestStatus)) {
+        buttonLabel = "Cancel";
+        buttonClass = "btn-warning";
     }
+
+    const tooltipHtml = `
+        <div>
+            <b>Created By:</b> ${booking.creator || "No Name"}<br>
+            <b>Date:</b> ${formatDate(booking.startDate)} - ${formatDate(booking.endDate)}<br>
+            <b>Purpose:</b> ${booking.text || "No Title"}<br><br>
+            <b>Details Rooms</b><br>
+            <b>Rooms:</b> ${room?.text || "Unknown Room"}<br>
+            <b>Occupancy:</b> ${roomOccupancy} Person<br>
+            <b>Booked:</b> ${totalBooked} Person<br>
+            <b>Remaining:</b> ${remainingCapacity} Person<br><br>
+            ${booking.isMine === "1" ? `<button id="${actionButtonId}" class="btn ${buttonClass} btn-sm">${buttonLabel}</button>` : ""}
+        </div>
+    `;
+
+    return tooltipHtml;
 }
